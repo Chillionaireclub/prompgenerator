@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Generator — Chillionaires</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #fff8f1;
+  --surface: #ffffff;
+  --surface2: #fdf4ee;
+  --surface3: #f9e0dc;
+  --border: rgba(122,62,72,0.1);
+  --border2: rgba(122,62,72,0.18);
+  --accent: #7a3e48;
+  --accent-dim: rgba(122,62,72,0.08);
+  --accent-border: rgba(122,62,72,0.22);
+  --purple: #c39082;
+  --text: #2e1a1a;
+  --muted: #a08070;
+  --muted2: #7a5c50;
+  --radius: 14px;
+  --radius-lg: 22px;
+}
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 52px 20px 100px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.blob { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
+.blob-a { width: 560px; height: 560px; background: radial-gradient(circle, rgba(195,144,130,0.18), transparent 70%); top: -180px; right: -140px; }
+.blob-b { width: 420px; height: 420px; background: radial-gradient(circle, rgba(249,224,220,0.5), transparent 70%); bottom: 60px; left: -120px; }
+
+.container { width: 100%; max-width: 660px; position: relative; z-index: 1; }
+
+/* Header */
+.header { margin-bottom: 40px; animation: fadeUp 0.55s ease both; }
+
+.back-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 500; color: var(--muted);
+  text-decoration: none; letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 32px; transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+.back-link::before { content: '←'; font-size: 14px; }
+
+h1 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(38px, 7vw, 60px);
+  font-weight: 700; line-height: 1.0; letter-spacing: -0.02em; margin-bottom: 18px;
+}
+h1 .lime { color: var(--accent); }
+
+.subtitle {
+  font-size: 15px; font-weight: 300; font-style: italic;
+  color: var(--muted2); line-height: 1.65; max-width: 440px;
+}
+
+/* Card */
+.card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); padding: 28px; margin-bottom: 12px;
+  animation: fadeUp 0.55s ease 0.07s both; position: relative;
+  box-shadow: 0 2px 24px rgba(122,62,72,0.06);
+}
+.card-shine {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 55%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(195,144,130,0.45), transparent);
+}
+
+.input-label {
+  font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--text);
+  margin-bottom: 10px; display: block;
+}
+
+textarea {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text);
+  font-family: 'Montserrat', sans-serif; font-size: 15px;
+  font-weight: 300; line-height: 1.7; padding: 16px 18px; resize: none;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s; min-height: 128px;
+}
+textarea::placeholder { color: var(--muted); }
+textarea:focus {
+  border-color: rgba(122,62,72,0.3);
+  box-shadow: 0 0 0 3px rgba(122,62,72,0.06);
+}
+
+.examples-label {
+  font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--text);
+  margin: 14px 0 8px; display: block;
+}
+
+.examples-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 22px; }
+
+.pill {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 100px;
+  color: var(--muted2); font-size: 12.5px; font-weight: 400; padding: 6px 13px;
+  cursor: pointer; transition: all 0.15s; line-height: 1;
+}
+.pill:hover { border-color: rgba(122,62,72,0.25); color: var(--accent); background: var(--accent-dim); }
+
+.controls-row { display: flex; gap: 8px; align-items: center; }
+
+.lang-toggle {
+  display: flex; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden; flex-shrink: 0; height: 46px;
+}
+.lang-btn {
+  background: none; border: none; color: var(--muted);
+  font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 500;
+  padding: 0 14px; cursor: pointer; transition: all 0.15s;
+}
+.lang-btn.active { background: var(--surface3); color: var(--text); }
+
+.btn-generate {
+  flex: 1; height: 46px; background: var(--accent); border: none; border-radius: 10px;
+  color: #fff8f1; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700;
+  letter-spacing: 0.01em; cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-generate:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(122,62,72,0.22); }
+.btn-generate:active { transform: none; box-shadow: none; }
+.btn-generate:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.spinner {
+  width: 15px; height: 15px; border: 2px solid rgba(255,248,241,0.3); border-top-color: #fff8f1;
+  border-radius: 50%; animation: spin 0.6s linear infinite; display: none; flex-shrink: 0;
+}
+
+.hint { font-size: 11px; color: var(--muted); text-align: right; margin-top: 8px; }
+
+.error-msg {
+  background: rgba(248,113,113,0.07); border: 1px solid rgba(248,113,113,0.18);
+  border-radius: var(--radius); color: #fca5a5; font-size: 13px;
+  padding: 12px 16px; margin-top: 12px; display: none; line-height: 1.5;
+}
+
+/* Result */
+.result-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); padding: 28px; display: none;
+  animation: fadeUp 0.4s ease both; position: relative; margin-bottom: 12px;
+  box-shadow: 0 2px 24px rgba(122,62,72,0.06);
+}
+.result-shine {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 45%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(195,144,130,0.5), transparent);
+}
+.result-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.result-label {
+  font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--purple);
+  display: flex; align-items: center; gap: 8px;
+}
+.pulse-dot { width: 6px; height: 6px; background: var(--purple); border-radius: 50%; animation: pulseDot 2s infinite; }
+.result-btns { display: flex; gap: 6px; }
+.btn-sm {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--muted2); font-family: 'Montserrat', sans-serif; font-size: 12px;
+  font-weight: 500; padding: 7px 13px; cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; gap: 5px; white-space: nowrap;
+}
+.btn-sm:hover { border-color: var(--border2); color: var(--text); }
+.btn-sm.copied { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); font-weight: 600; }
+.result-text { font-size: 15px; font-weight: 300; line-height: 1.8; color: var(--text); white-space: pre-wrap; min-height: 40px; }
+.result-text ul {
+  margin: 8px 0 8px 4px;
+  padding-left: 18px;
+  list-style: none;
+}
+.result-text ul li {
+  position: relative;
+  padding-left: 14px;
+  margin-bottom: 5px;
+  line-height: 1.6;
+}
+.result-text ul li::before {
+  content: '–';
+  position: absolute;
+  left: 0;
+  color: var(--purple);
+  font-weight: 600;
+}
+.result-text strong {
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.01em;
+}
+.result-text br + br { display: none; }
+
+.cursor-blink {
+  display: inline-block; width: 2px; height: 1.1em; background: var(--accent);
+  margin-left: 1px; vertical-align: middle; animation: blink 0.75s step-end infinite;
+}
+.platforms { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.platforms-label { font-size: 11px; color: var(--muted); margin-right: 4px; }
+.platform-chip {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--muted2); font-size: 12px; font-weight: 500; padding: 6px 12px;
+  cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 5px;
+}
+.platform-chip:hover { border-color: var(--border2); color: var(--text); background: var(--surface3); }
+
+/* History */
+.history-wrap { animation: fadeUp 0.55s ease 0.12s both; display: none; margin-top: 8px; }
+.history-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.history-title-row {
+  font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--text);
+  display: flex; align-items: center; gap: 8px;
+}
+.badge-count { background: var(--accent); border-radius: 100px; font-size: 10px; padding: 2px 8px; color: #fff8f1; font-weight: 600; }
+.btn-clear { background: none; border: none; color: var(--muted); font-size: 11px; cursor: pointer; padding: 4px 8px; border-radius: 6px; font-family: 'Montserrat', sans-serif; transition: color 0.15s; }
+.btn-clear:hover { color: #a05050; }
+.history-items { display: flex; flex-direction: column; gap: 8px; }
+.h-item {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius); padding: 16px 18px; cursor: pointer; transition: all 0.18s;
+  box-shadow: 0 2px 12px rgba(122,62,72,0.05);
+}
+.h-item:hover { border-color: var(--accent); background: var(--surface2); box-shadow: 0 4px 20px rgba(122,62,72,0.1); transform: translateY(-1px); }
+.h-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.h-time { font-size: 10px; color: var(--muted); font-weight: 500; }
+.h-input { font-size: 12px; color: var(--accent); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px; }
+.h-prompt { font-size: 13px; color: var(--muted2); font-weight: 300; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.55; }
+
+.footer { text-align: center; margin-top: 52px; color: var(--muted); font-size: 11px; letter-spacing: 0.04em; line-height: 1.8; }
+.footer a { color: var(--muted2); text-decoration: none; }
+.footer a:hover { color: var(--text); }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+@keyframes pulseDot { 0%,100% { opacity:1; box-shadow: 0 0 7px rgba(195,144,130,0.6); } 50% { opacity:0.35; box-shadow: none; } }
+</style>
+</head>
+<body>
+
+<div class="blob blob-a"></div>
+<div class="blob blob-b"></div>
+
+<div class="container">
+
+  <div class="header">
+    <a class="back-link" href="https://chillionaires.club">Chillionaires</a>
+    <h1>Prompt<br><span class="lime">Generator</span></h1>
+    <p class="subtitle">Typ gewoon wat je wilt bereiken — in je eigen woorden. Wij maken er in seconden een scherpe prompt van die élk AI-model begrijpt.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-shine"></div>
+    <span class="input-label">Wat wil je bereiken?</span>
+    <textarea id="userInput" placeholder="Bijv: ik wil een weekje naar Lissabon, geef me een reisplan..." rows="5"></textarea>
+
+    <span class="examples-label">Of kies een voorbeeld</span>
+    <div class="examples-row" id="examplesRow"></div>
+
+    <div class="controls-row">
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="btn-nl" onclick="setLang('nl')">🇳🇱 NL</button>
+        <button class="lang-btn" id="btn-en" onclick="setLang('en')">🇬🇧 EN</button>
+      </div>
+      <button class="btn-generate" id="generateBtn" onclick="generatePrompt()">
+        <div class="spinner" id="spinner"></div>
+        <span id="btnText">Maak mijn prompt →</span>
+      </button>
+    </div>
+    <div class="hint">⌘ + Enter om te genereren</div>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <div class="result-card" id="resultCard">
+    <div class="result-shine"></div>
+    <div class="result-top">
+      <div class="result-label"><div class="pulse-dot"></div>Jouw prompt</div>
+      <div class="result-btns">
+        <button class="btn-sm" onclick="generatePrompt()">↺ Opnieuw</button>
+        <button class="btn-sm" id="copyBtn" onclick="copyPrompt()">📋 Kopieer</button>
+      </div>
+    </div>
+    <div class="result-text" id="resultText"></div>
+    <div class="platforms">
+      <span class="platforms-label">Plak direct in →</span>
+      <div class="platform-chip" onclick="openPlatform('chatgpt')">🤖 ChatGPT</div>
+      <div class="platform-chip" onclick="openPlatform('claude')">✦ Claude</div>
+      <div class="platform-chip" onclick="openPlatform('gemini')">💎 Gemini</div>
+      <div class="platform-chip" onclick="openPlatform('copilot')">🪟 Copilot</div>
+    </div>
+  </div>
+
+  <div class="history-wrap" id="historyWrap">
+    <div class="history-head">
+      <div class="history-title-row">Eerdere prompts <span class="badge-count" id="historyCount">0</span></div>
+      <button class="btn-clear" onclick="clearHistory()">Wis alles</button>
+    </div>
+    <div class="history-items" id="historyItems"></div>
+  </div>
+
+  <div class="footer">
+    Een tool uit de <a href="https://chillionaires.club">Chillionaires AI Guide</a><br>
+    Werkt met ChatGPT · Claude · Gemini · Copilot
+  </div>
+
+</div>
+
+<script>
+// API key wordt veilig bewaard op de server, niet hier // ← vervang dit voor lokaal testen
+const API_URL = '/api/generate';
+
+let lang = 'nl';
+let generatedPrompt = '';
+let history = [];
+try { history = JSON.parse(localStorage.getItem('pg_history') || '[]'); } catch(e) {}
+
+const examples = {
+  nl: [
+    'Weekje naar Lissabon plannen ✈️',
+    'Hulp bij stoppen met suiker',
+    'Meer sparen, waar begin ik?',
+    'Praten met mijn tiener over stress',
+    'Omgaan met het verlies van mijn moeder',
+    'Gezonder eten zonder gedoe 🥗',
+    'Recept met restjes uit de koelkast 🍳',
+    'Moeilijk gesprek met mijn baas',
+  ],
+  en: [
+    'Plan a week in Lisbon ✈️',
+    'Help me quit sugar',
+    'Save more money — where to start?',
+    'Talk to my teenager about stress',
+    'Coping with the loss of my mother',
+    'Eat healthier without overthinking 🥗',
+    'Recipe with leftovers in the fridge 🍳',
+    'Difficult conversation with my boss',
+  ]
+};
+
+const systemPrompts = {
+  nl: `Je bent een expert prompt-engineer die gewone mensen helpt het beste uit ChatGPT en Claude te halen voor hun privéleven. Iemand geeft je een ruwe gedachte of wens — jij schrijft daar een rijke, overzichtelijke prompt van met placeholders.
+
+Het probleem dat je oplost: de meeste mensen typen een te korte, vage vraag. Jij voegt de ontbrekende context toe — met placeholders waar de gebruiker zelf iets moet invullen.
+
+Opmaak — gebruik altijd deze vaste structuur:
+
+[Openingszin met de hoofdvraag]
+
+**Mijn situatie:**
+- [relevante placeholder 1, bijv. Mijn huidtype: droog / vet / combinatie / gevoelig]
+- [relevante placeholder 2, bijv. Mijn budget: €... per maand]
+- [relevante placeholder 3]
+- [relevante placeholder 4 indien van toepassing]
+
+[Afsluitzin: wat de gebruiker precies wil ontvangen — advies, stappenplan, lijstje, etc.]
+
+Regels voor placeholders:
+- Schrijf placeholders als: [omschrijving: optie1 / optie2 / optie3] voor keuzevelden
+- Of als: [omschrijving: ...] voor vrije invulvelden
+- Kies placeholders die echt relevant zijn voor het onderwerp. Voorbeelden:
+  - Skincare: [Mijn huidtype: droog / vet / combinatie / gevoelig], [Mijn leeftijd: ...], [Mijn grootste huidklacht: ...], [Mijn budget per maand: ...]
+  - Reisplanning: [Reisgezelschap: alleen / met partner / met vrienden / met kinderen], [Budget: ...], [Vertrekpunt: ...], [Type vakantie: strand / cultuur / avontuur / mix]
+  - Voeding: [Dieetwensen of allergieën: ...], [Kookniveau: beginner / gemiddeld / gevorderd], [Beschikbare tijd per maaltijd: ...]
+  - Gevoelige onderwerpen: [Wat ik zoek: begrip / praktisch advies / allebei], [Toon: luisterend / direct]
+- Houd de taal menselijk en warm
+- Geef alleen de prompt terug — geen uitleg eromheen`,
+
+  en: `You are an expert prompt engineer helping everyday people get the most out of ChatGPT and Claude in their personal lives. Someone gives you a rough thought — you turn it into a rich, well-structured prompt with placeholders.
+
+The problem you solve: most people type a short, vague question. You add the missing context — with placeholders where the user needs to fill in their own details.
+
+Format — always use this fixed structure:
+
+[Opening sentence with the main request]
+
+**My situation:**
+- [relevant placeholder 1, e.g. My skin type: dry / oily / combination / sensitive]
+- [relevant placeholder 2, e.g. My budget: $... per month]
+- [relevant placeholder 3]
+- [relevant placeholder 4 if applicable]
+
+[Closing sentence: exactly what the user wants to receive — advice, step-by-step plan, list, etc.]
+
+Rules for placeholders:
+- Write placeholders as: [description: option1 / option2 / option3] for choice fields
+- Or as: [description: ...] for open fields
+- Choose placeholders that are truly relevant to the topic. Examples:
+  - Skincare: [My skin type: dry / oily / combination / sensitive], [My age: ...], [My main skin concern: ...], [My monthly budget: ...]
+  - Travel: [Travel companions: alone / with partner / with friends / with kids], [Budget: ...], [Departure city: ...], [Vacation style: beach / culture / adventure / mix]
+  - Food: [Dietary needs or allergies: ...], [Cooking level: beginner / intermediate / advanced], [Time per meal: ...]
+  - Sensitive topics: [What I'm looking for: understanding / practical advice / both], [Tone: empathetic / direct]
+- Keep language natural and warm
+- Return only the formatted prompt — no explanation around it`
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderExamples();
+  renderHistory();
+  document.getElementById('userInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) generatePrompt();
+  });
+});
+
+function renderExamples() {
+  document.getElementById('examplesRow').innerHTML = examples[lang].map(ex =>
+    `<div class="pill" onclick="fillExample(this)">${ex}</div>`
+  ).join('');
+}
+
+function fillExample(el) {
+  const text = el.textContent.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+  document.getElementById('userInput').value = text;
+  document.getElementById('userInput').focus();
+}
+
+function setLang(l) {
+  lang = l;
+  document.getElementById('btn-nl').classList.toggle('active', l === 'nl');
+  document.getElementById('btn-en').classList.toggle('active', l === 'en');
+  renderExamples();
+}
+
+async function generatePrompt() {
+  const input = document.getElementById('userInput').value.trim();
+  if (!input) {
+    showError(lang === 'nl' ? 'Vul eerst in wat je wilt bereiken.' : 'Please describe what you want to achieve.');
+    return;
+  }
+  setLoading(true);
+  hideError();
+  document.getElementById('resultCard').style.display = 'none';
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompts[lang],
+        messages: [{ role: 'user', content: input }]
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || `API fout (${res.status})`);
+
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+    if (!text) throw new Error('Geen resultaat ontvangen');
+
+    generatedPrompt = text;
+    showResult(text);
+    saveHistory(input, text);
+  } catch (err) {
+    showError(lang === 'nl' ? `Er ging iets mis: ${err.message}` : `Something went wrong: ${err.message}`);
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderMarkdown(text) {
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*?<\/li>\n?)+/gs, m => '<ul>' + m + '</ul>')
+    .replace(/\n/g, '<br>');
+}
+
+function showResult(text) {
+  const card = document.getElementById('resultCard');
+  const el = document.getElementById('resultText');
+  card.style.display = 'block';
+
+  // Typewriter on raw text, then render markdown at end
+  el.innerHTML = '<span class="cursor-blink"></span>';
+  const cursor = el.querySelector('.cursor-blink');
+  let i = 0;
+  let raw = '';
+  const speed = text.length > 500 ? 5 : 10;
+  const timer = setInterval(() => {
+    if (i < text.length) {
+      raw += text[i++];
+      cursor.insertAdjacentText('beforebegin', text[i-1]);
+    } else {
+      clearInterval(timer);
+      cursor.remove();
+      // Re-render as markdown after typewriter completes
+      el.innerHTML = renderMarkdown(text);
+    }
+  }, speed);
+  setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+}
+
+function copyPrompt() {
+  if (!generatedPrompt) return;
+  const btn = document.getElementById('copyBtn');
+
+  // Modern clipboard API (werkt op https)
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(generatedPrompt).then(() => showCopied(btn));
+  } else {
+    // Fallback voor lokaal / file://
+    const ta = document.createElement('textarea');
+    ta.value = generatedPrompt;
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); showCopied(btn); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+}
+
+function showCopied(btn) {
+  btn.textContent = '✓ Gekopieerd!';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.innerHTML = '📋 Kopieer'; btn.classList.remove('copied'); }, 2200);
+}
+
+function openPlatform(p) {
+  const urls = { chatgpt: 'https://chat.openai.com', claude: 'https://claude.ai', gemini: 'https://gemini.google.com', copilot: 'https://copilot.microsoft.com' };
+  window.open(urls[p], '_blank');
+}
+
+function saveHistory(input, prompt) {
+  const item = { id: Date.now(), input, prompt, lang, time: new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) };
+  history.unshift(item);
+  if (history.length > 15) history = history.slice(0, 15);
+  try { localStorage.setItem('pg_history', JSON.stringify(history)); } catch(e) {}
+  renderHistory();
+}
+
+function renderHistory() {
+  const wrap = document.getElementById('historyWrap');
+  if (history.length === 0) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  document.getElementById('historyCount').textContent = history.length;
+  document.getElementById('historyItems').innerHTML = history.map(item => `
+    <div class="h-item" onclick="loadHistory(${item.id})">
+      <div class="h-meta"><span class="h-time">${item.time}</span><span style="font-size:10px;color:var(--muted)">· ${item.lang.toUpperCase()}</span></div>
+      <div class="h-input">↳ ${escHtml(item.input)}</div>
+      <div class="h-prompt">${escHtml(item.prompt)}</div>
+    </div>
+  `).join('');
+}
+
+function loadHistory(id) {
+  const item = history.find(h => h.id === id);
+  if (!item) return;
+  document.getElementById('userInput').value = item.input;
+  setLang(item.lang);
+  generatedPrompt = item.prompt;
+  showResult(item.prompt);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearHistory() {
+  history = [];
+  try { localStorage.removeItem('pg_history'); } catch(e) {}
+  renderHistory();
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function setLoading(on) {
+  document.getElementById('spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('btnText').textContent = on ? (lang === 'nl' ? 'Even geduld...' : 'Generating...') : 'Maak mijn prompt →';
+  document.getElementById('generateBtn').disabled = on;
+}
+
+function showError(msg) { const el = document.getElementById('errorMsg'); el.textContent = msg; el.style.display = 'block'; }
+function hideError() { document.getElementById('errorMsg').style.display = 'none'; }
+</script>
+</body>
+</html>
