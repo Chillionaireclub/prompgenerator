@@ -91,6 +91,42 @@ h1 .lime { color: var(--accent); }
   background: linear-gradient(90deg, transparent, rgba(195,144,130,0.45), transparent);
 }
 
+.mode-toggle {
+  display: flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  width: fit-content;
+}
+
+.mode-btn {
+  background: none;
+  border: none;
+  color: var(--muted2);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  color: #fff8f1;
+  font-weight: 600;
+}
+
+.mode-btn:hover:not(.active) {
+  color: var(--text);
+  background: var(--surface3);
+}
+
 .input-label {
   font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700;
   letter-spacing: 0.16em; text-transform: uppercase; color: var(--text);
@@ -220,14 +256,8 @@ textarea:focus {
   display: inline-block; width: 2px; height: 1.1em; background: var(--accent);
   margin-left: 1px; vertical-align: middle; animation: blink 0.75s step-end infinite;
 }
-.platforms { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-.platforms-label { font-size: 11px; color: var(--muted); margin-right: 4px; }
-.platform-chip {
-  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
-  color: var(--muted2); font-size: 12px; font-weight: 500; padding: 6px 12px;
-  cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 5px;
-}
-.platform-chip:hover { border-color: var(--border2); color: var(--text); background: var(--surface3); }
+.platforms { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
+.platforms-label { font-size: 13px; color: var(--muted2); font-style: italic; line-height: 1.5; }
 
 /* History */
 .history-wrap { animation: fadeUp 0.55s ease 0.12s both; display: none; margin-top: 8px; }
@@ -278,6 +308,11 @@ textarea:focus {
 
   <div class="card">
     <div class="card-shine"></div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btn-prive" onclick="setMode('prive')">🏠 Privé</button>
+      <button class="mode-btn" id="btn-zakelijk" onclick="setMode('zakelijk')">💼 Zakelijk</button>
+    </div>
+
     <span class="input-label">Wat wil je bereiken?</span>
     <textarea id="userInput" placeholder="Bijv: ik wil een weekje naar Lissabon, geef me een reisplan..." rows="5"></textarea>
 
@@ -309,11 +344,7 @@ textarea:focus {
     </div>
     <div class="result-text" id="resultText"></div>
     <div class="platforms">
-      <span class="platforms-label">Plak direct in →</span>
-      <div class="platform-chip" onclick="openPlatform('chatgpt')">🤖 ChatGPT</div>
-      <div class="platform-chip" onclick="openPlatform('claude')">✦ Claude</div>
-      <div class="platform-chip" onclick="openPlatform('gemini')">💎 Gemini</div>
-      <div class="platform-chip" onclick="openPlatform('copilot')">🪟 Copilot</div>
+      <span class="platforms-label">📋 Kopieer de prompt hierboven en plak hem in ChatGPT, Claude, Gemini of een ander AI-model naar keuze.</span>
     </div>
   </div>
 
@@ -337,87 +368,122 @@ textarea:focus {
 const API_URL = '/api/generate';
 
 let lang = 'nl';
+let mode = 'prive';
 let generatedPrompt = '';
 let history = [];
 try { history = JSON.parse(localStorage.getItem('pg_history') || '[]'); } catch(e) {}
 
 const examples = {
-  nl: [
-    'Weekje naar Lissabon plannen ✈️',
-    'Hulp bij stoppen met suiker',
-    'Meer sparen, waar begin ik?',
-    'Praten met mijn tiener over stress',
-    'Omgaan met het verlies van mijn moeder',
-    'Gezonder eten zonder gedoe 🥗',
-    'Recept met restjes uit de koelkast 🍳',
-    'Moeilijk gesprek met mijn baas',
-  ],
-  en: [
-    'Plan a week in Lisbon ✈️',
-    'Help me quit sugar',
-    'Save more money — where to start?',
-    'Talk to my teenager about stress',
-    'Coping with the loss of my mother',
-    'Eat healthier without overthinking 🥗',
-    'Recipe with leftovers in the fridge 🍳',
-    'Difficult conversation with my boss',
-  ]
+  prive: {
+    nl: [
+      'Weekje naar Lissabon plannen ✈️',
+      'Hulp bij stoppen met suiker',
+      'Meer sparen, waar begin ik?',
+      'Praten met mijn tiener over stress',
+      'Omgaan met het verlies van mijn moeder',
+      'Gezonder eten zonder gedoe 🥗',
+      'Recept met restjes uit de koelkast 🍳',
+      'Moeilijk gesprek met mijn partner',
+    ],
+    en: [
+      'Plan a week in Lisbon ✈️',
+      'Help me quit sugar',
+      'Save more money — where to start?',
+      'Talk to my teenager about stress',
+      'Coping with the loss of my mother',
+      'Eat healthier without overthinking 🥗',
+      'Recipe with leftovers in the fridge 🍳',
+      'Difficult conversation with my partner',
+    ]
+  },
+  zakelijk: {
+    nl: [
+      'Mijn prijzen verhogen zonder klanten te verliezen',
+      'LinkedIn post schrijven over mijn dienst',
+      'Offerte sturen naar een nieuwe klant',
+      'Meer klanten aantrekken zonder groot budget',
+      'Mijn aanbod beter omschrijven',
+      'Omgaan met een lastige klant',
+      'Mijn eerste online cursus lanceren',
+      'Betere reacties krijgen op mijn mails',
+    ],
+    en: [
+      'Raise my prices without losing clients',
+      'Write a LinkedIn post about my service',
+      'Send a quote to a new client',
+      'Attract more clients without a big budget',
+      'Describe my offer more clearly',
+      'Handle a difficult client',
+      'Launch my first online course',
+      'Get better responses to my emails',
+    ]
+  }
 };
 
 const systemPrompts = {
-  nl: `Je bent een expert prompt-engineer die gewone mensen helpt het beste uit ChatGPT en Claude te halen voor hun privéleven. Iemand geeft je een ruwe gedachte of wens — jij schrijft daar een rijke, overzichtelijke prompt van met placeholders.
+  nl: `Je bent een expert prompt-engineer die gewone mensen en ondernemers helpt het beste uit AI-modellen te halen. Iemand geeft je een ruwe gedachte of wens — jij analyseert die eerst en schrijft dan een op maat gemaakte prompt.
 
-Het probleem dat je oplost: de meeste mensen typen een te korte, vage vraag. Jij voegt de ontbrekende context toe — met placeholders waar de gebruiker zelf iets moet invullen.
+Stap 1 — Analyseer de vraag:
+Denk na over wat deze persoon écht nodig heeft. Welke details maken het verschil tussen een generiek en een persoonlijk antwoord? Dit verschilt per vraag:
+- Persoonlijk (gezondheid, lifestyle, reizen, relaties): situatie, voorkeuren, beperkingen, budget
+- Zakelijk (strategie, communicatie, groei, content): type business, doelgroep, ervaring, specifieke uitdaging
+- Creatief (schrijven, ideeën, campagnes): doel, toon, doelgroep, platform
+- Emotioneel (rouw, stress, conflicten): wat zoekt de persoon — begrip, advies, of allebei?
 
-Opmaak — gebruik altijd deze vaste structuur:
+Stap 2 — Schrijf een op maat prompt met deze vaste structuur:
 
-[Openingszin met de hoofdvraag]
+[Één krachtige openingszin die de hoofdvraag scherp en specifiek formuleert]
 
 **Mijn situatie:**
-- [relevante placeholder 1, bijv. Mijn huidtype: droog / vet / combinatie / gevoelig]
-- [relevante placeholder 2, bijv. Mijn budget: €... per maand]
-- [relevante placeholder 3]
-- [relevante placeholder 4 indien van toepassing]
+- [Placeholder 1 — meest cruciale context voor deze vraag]
+- [Placeholder 2]
+- [Placeholder 3]
+- [Placeholder 4 — alleen toevoegen als echt nodig]
+- [Placeholder 5 — alleen toevoegen als de vraag complex genoeg is]
 
-[Afsluitzin: wat de gebruiker precies wil ontvangen — advies, stappenplan, lijstje, etc.]
+[Één concrete afsluitzin met een specifieke opdracht aan het AI-model — afgestemd op wat deze persoon wil bereiken]
 
 Regels voor placeholders:
-- Schrijf placeholders als: [omschrijving: optie1 / optie2 / optie3] voor keuzevelden
-- Of als: [omschrijving: ...] voor vrije invulvelden
-- Kies placeholders die echt relevant zijn voor het onderwerp. Voorbeelden:
-  - Skincare: [Mijn huidtype: droog / vet / combinatie / gevoelig], [Mijn leeftijd: ...], [Mijn grootste huidklacht: ...], [Mijn budget per maand: ...]
-  - Reisplanning: [Reisgezelschap: alleen / met partner / met vrienden / met kinderen], [Budget: ...], [Vertrekpunt: ...], [Type vakantie: strand / cultuur / avontuur / mix]
-  - Voeding: [Dieetwensen of allergieën: ...], [Kookniveau: beginner / gemiddeld / gevorderd], [Beschikbare tijd per maaltijd: ...]
-  - Gevoelige onderwerpen: [Wat ik zoek: begrip / praktisch advies / allebei], [Toon: luisterend / direct]
-- Houd de taal menselijk en warm
+- Minimaal 3, maximaal 5 — alleen wat écht het antwoord beïnvloedt
+- Simpele vraag = 3 placeholders, complexe vraag = 4-5
+- Schrijf keuze-placeholders als: [omschrijving: optie1 / optie2 / optie3]
+- Schrijf open placeholders als: [omschrijving: ...]
+- Kies altijd de meest impactvolle context — niet wat nice-to-have is
+- De afsluitzin is een concrete opdracht, geen opsomming van wensen
+- Houd taal menselijk en warm — geen jargon
 - Geef alleen de prompt terug — geen uitleg eromheen`,
 
-  en: `You are an expert prompt engineer helping everyday people get the most out of ChatGPT and Claude in their personal lives. Someone gives you a rough thought — you turn it into a rich, well-structured prompt with placeholders.
+  en: `You are an expert prompt engineer helping everyday people and entrepreneurs get the most out of AI models. Someone gives you a rough thought — you analyze it first, then write a tailor-made prompt.
 
-The problem you solve: most people type a short, vague question. You add the missing context — with placeholders where the user needs to fill in their own details.
+Step 1 — Analyze the request:
+Think about what this person really needs. Which details make the difference between a generic and a personal answer? This varies per request:
+- Personal (health, lifestyle, travel, relationships): situation, preferences, constraints, budget
+- Business (strategy, communication, growth, content): business type, target audience, experience, specific challenge
+- Creative (writing, ideas, campaigns): goal, tone, audience, platform
+- Emotional (grief, stress, conflicts): what is the person looking for — understanding, advice, or both?
 
-Format — always use this fixed structure:
+Step 2 — Write a tailor-made prompt with this fixed structure:
 
-[Opening sentence with the main request]
+[One powerful opening sentence that formulates the main question sharply and specifically]
 
 **My situation:**
-- [relevant placeholder 1, e.g. My skin type: dry / oily / combination / sensitive]
-- [relevant placeholder 2, e.g. My budget: $... per month]
-- [relevant placeholder 3]
-- [relevant placeholder 4 if applicable]
+- [Placeholder 1 — most crucial context for this question]
+- [Placeholder 2]
+- [Placeholder 3]
+- [Placeholder 4 — only add if truly needed]
+- [Placeholder 5 — only add if the question is complex enough]
 
-[Closing sentence: exactly what the user wants to receive — advice, step-by-step plan, list, etc.]
+[One concrete closing sentence with a specific instruction to the AI model — tailored to what this person wants to achieve]
 
 Rules for placeholders:
-- Write placeholders as: [description: option1 / option2 / option3] for choice fields
-- Or as: [description: ...] for open fields
-- Choose placeholders that are truly relevant to the topic. Examples:
-  - Skincare: [My skin type: dry / oily / combination / sensitive], [My age: ...], [My main skin concern: ...], [My monthly budget: ...]
-  - Travel: [Travel companions: alone / with partner / with friends / with kids], [Budget: ...], [Departure city: ...], [Vacation style: beach / culture / adventure / mix]
-  - Food: [Dietary needs or allergies: ...], [Cooking level: beginner / intermediate / advanced], [Time per meal: ...]
-  - Sensitive topics: [What I'm looking for: understanding / practical advice / both], [Tone: empathetic / direct]
-- Keep language natural and warm
-- Return only the formatted prompt — no explanation around it`
+- Minimum 3, maximum 5 — only what truly impacts the answer
+- Simple question = 3 placeholders, complex question = 4-5
+- Write choice placeholders as: [description: option1 / option2 / option3]
+- Write open placeholders as: [description: ...]
+- Always choose the most impactful context — not nice-to-haves
+- The closing sentence is a concrete instruction, not a list of wishes
+- Keep language natural and warm — no jargon
+- Return only the prompt — no explanation around it`
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -428,8 +494,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-prive').classList.toggle('active', m === 'prive');
+  document.getElementById('btn-zakelijk').classList.toggle('active', m === 'zakelijk');
+  renderExamples();
+}
+
 function renderExamples() {
-  document.getElementById('examplesRow').innerHTML = examples[lang].map(ex =>
+  document.getElementById('examplesRow').innerHTML = examples[mode][lang].map(ex =>
     `<div class="pill" onclick="fillExample(this)">${ex}</div>`
   ).join('');
 }
@@ -458,13 +531,17 @@ async function generatePrompt() {
   document.getElementById('resultCard').style.display = 'none';
 
   try {
+    const modeContext = mode === 'zakelijk'
+      ? (lang === 'nl' ? '\n\nDeze vraag is ZAKELIJK — focus op ondernemers, zzp\'ers, business en professionele context.' : '\n\nThis is a BUSINESS question — focus on entrepreneurs, freelancers, business and professional context.')
+      : (lang === 'nl' ? '\n\nDeze vraag is PRIVÉ — focus op persoonlijk leven, dagelijkse situaties en privécontext.' : '\n\nThis is a PERSONAL question — focus on personal life, everyday situations and private context.');
+
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
-        system: systemPrompts[lang],
+        system: systemPrompts[lang] + modeContext,
         messages: [{ role: 'user', content: input }]
       })
     });
