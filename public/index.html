@@ -192,6 +192,67 @@ textarea:focus {
 }
 .btn-sm:hover { border-color: var(--border2); color: var(--text); }
 .btn-sm.copied { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); font-weight: 600; }
+.placeholder-input {
+  display: inline;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--muted2);
+  padding: 1px 6px;
+  cursor: pointer;
+  font-style: italic;
+  font-size: 0.95em;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.placeholder-input:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(122,62,72,0.06);
+}
+
+.placeholder-input.active {
+  background: #fff;
+  border-color: var(--accent);
+  padding: 0;
+}
+
+.placeholder-input.filled {
+  background: rgba(122,62,72,0.08);
+  border-color: rgba(122,62,72,0.3);
+  color: var(--text);
+  font-style: normal;
+  font-weight: 500;
+}
+
+.placeholder-field {
+  border: none;
+  outline: none;
+  background: #fff;
+  color: #2e1a1a;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 160px;
+  max-width: 300px;
+  width: auto;
+}
+
+.result-instruction {
+  font-size: 12px;
+  color: var(--muted2);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 13px;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+.result-instruction strong { color: var(--accent); font-weight: 600; }
+
 .result-text { font-size: 15px; font-weight: 300; line-height: 1.8; color: var(--text); white-space: pre-wrap; min-height: 40px; }
 .result-text ul {
   margin: 8px 0 8px 4px;
@@ -303,6 +364,7 @@ textarea:focus {
         <button class="btn-sm" id="copyBtn" onclick="copyPrompt()">📋 Kopieer</button>
       </div>
     </div>
+    <div class="result-instruction">✏️ Klik op de <strong>[...]</strong> onderdelen om ze in te vullen — dan kopieer je een kant-en-klare prompt.</div>
     <div class="result-text" id="resultText"></div>
     <div class="platforms">
       <span class="platforms-label">📋 Kopieer de prompt hierboven en plak hem in ChatGPT, Claude, Gemini of een ander AI-model naar keuze.</span>
@@ -510,12 +572,65 @@ async function generatePrompt() {
 }
 
 function renderMarkdown(text) {
-  return text
+  let html = text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]/g, (match, inner) => {
+      const hint = inner.trim();
+      return `<span class="placeholder-input" onclick="activatePlaceholder(this)" data-hint="${hint.replace(/"/g, '&quot;')}">[${hint}]</span>`;
+    })
     .replace(/^- (.+)$/gm, '<li>$1</li>')
     .replace(/(<li>.*?<\/li>\n?)+/gs, m => '<ul>' + m + '</ul>')
     .replace(/\n/g, '<br>');
+  return html;
+}
+
+function activatePlaceholder(el) {
+  if (el.querySelector('input')) return; // already active
+
+  const hint = el.dataset.hint;
+  const currentText = el.textContent.replace(/^\[|\]$/g, '').trim();
+  const isHint = currentText === hint;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'placeholder-field';
+  input.placeholder = hint;
+  input.value = isHint ? '' : currentText;
+
+  el.innerHTML = '';
+  el.appendChild(input);
+  el.classList.add('active');
+  input.focus();
+
+  function save() {
+    const val = input.value.trim();
+    if (val) {
+      el.innerHTML = val;
+      el.classList.remove('active');
+      el.classList.add('filled');
+      updateGeneratedPrompt();
+    } else {
+      el.innerHTML = '[' + hint + ']';
+      el.classList.remove('active', 'filled');
+    }
+  }
+
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') {
+      el.innerHTML = '[' + hint + ']';
+      el.classList.remove('active', 'filled');
+    }
+  });
+}
+
+function updateGeneratedPrompt() {
+  // Rebuild the prompt text from current DOM state
+  const el = document.getElementById('resultText');
+  let text = el.innerText || el.textContent;
+  generatedPrompt = text;
 }
 
 function showResult(text) {
@@ -565,6 +680,20 @@ function copyPrompt() {
 function showCopied(btn) {
   btn.textContent = '✓ Gekopieerd!';
   btn.classList.add('copied');
+
+  // Show reminder
+  const instruction = document.querySelector('.result-instruction');
+  if (instruction) {
+    instruction.style.borderColor = 'rgba(122,62,72,0.4)';
+    instruction.style.color = 'var(--accent)';
+    instruction.innerHTML = '✏️ Tip: klik eerst op de <strong>[...]</strong> onderdelen om ze in te vullen!';
+    setTimeout(() => {
+      instruction.style.borderColor = '';
+      instruction.style.color = '';
+      instruction.innerHTML = '✏️ Klik op de <strong>[...]</strong> onderdelen om ze in te vullen — dan kopieer je een kant-en-klare prompt.';
+    }, 3000);
+  }
+
   setTimeout(() => { btn.innerHTML = '📋 Kopieer'; btn.classList.remove('copied'); }, 2200);
 }
 
