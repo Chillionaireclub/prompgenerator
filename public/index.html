@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prompt Generator — Chillionaires</title>
+<title>Prompt Generator Pro — Chillionaires</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,15 +39,6 @@ body {
   overflow-x: hidden;
 }
 
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-}
-
 .blob { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
 .blob-a { width: 560px; height: 560px; background: radial-gradient(circle, rgba(195,144,130,0.18), transparent 70%); top: -180px; right: -140px; }
 .blob-b { width: 420px; height: 420px; background: radial-gradient(circle, rgba(249,224,220,0.5), transparent 70%); bottom: 60px; left: -120px; }
@@ -67,34 +58,88 @@ body::before {
 .back-link::before { content: '←'; font-size: 14px; }
 
 h1 {
-  font-family: 'Montserrat', sans-serif;
   font-size: clamp(38px, 7vw, 60px);
   font-weight: 700; line-height: 1.0; letter-spacing: -0.02em; margin-bottom: 18px;
 }
-h1 .lime { color: var(--accent); }
+h1 .accent { color: var(--accent); }
 
 .subtitle {
   font-size: 15px; font-weight: 300; font-style: italic;
   color: var(--muted2); line-height: 1.65; max-width: 440px;
 }
 
+/* Steps indicator */
+.steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 28px;
+  animation: fadeUp 0.55s ease 0.05s both;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: color 0.2s;
+}
+
+.step.active { color: var(--accent); }
+.step.done { color: var(--purple); }
+
+.step-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700;
+  transition: all 0.2s;
+}
+
+.step.active .step-num {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff8f1;
+}
+
+.step.done .step-num {
+  background: var(--surface3);
+  border-color: var(--purple);
+  color: var(--accent);
+}
+
+.step-divider {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
 /* Card */
 .card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: var(--radius-lg); padding: 28px; margin-bottom: 12px;
-  animation: fadeUp 0.55s ease 0.07s both; position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  margin-bottom: 12px;
+  position: relative;
   box-shadow: 0 2px 24px rgba(122,62,72,0.06);
+  animation: fadeUp 0.55s ease 0.07s both;
 }
+
 .card-shine {
   position: absolute; top: 0; left: 50%; transform: translateX(-50%);
   width: 55%; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(195,144,130,0.45), transparent);
 }
 
-
-
 .input-label {
-  font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700;
+  font-size: 10px; font-weight: 700;
   letter-spacing: 0.16em; text-transform: uppercase; color: var(--text);
   margin-bottom: 10px; display: block;
 }
@@ -104,7 +149,7 @@ textarea {
   border-radius: var(--radius); color: var(--text);
   font-family: 'Montserrat', sans-serif; font-size: 15px;
   font-weight: 300; line-height: 1.7; padding: 16px 18px; resize: none;
-  outline: none; transition: border-color 0.2s, box-shadow 0.2s; min-height: 128px;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s; min-height: 110px;
 }
 textarea::placeholder { color: var(--muted); }
 textarea:focus {
@@ -112,14 +157,12 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgba(122,62,72,0.06);
 }
 
+/* Examples */
 .examples-label {
-  font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700;
-  letter-spacing: 0.14em; text-transform: uppercase; color: var(--text);
-  margin: 14px 0 8px; display: block;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--text); margin: 14px 0 8px; display: block;
 }
-
 .examples-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 22px; }
-
 .pill {
   background: var(--surface2); border: 1px solid var(--border); border-radius: 100px;
   color: var(--muted2); font-size: 12.5px; font-weight: 400; padding: 6px 13px;
@@ -127,29 +170,16 @@ textarea:focus {
 }
 .pill:hover { border-color: rgba(122,62,72,0.25); color: var(--accent); background: var(--accent-dim); }
 
-.controls-row { display: flex; gap: 8px; align-items: center; }
-
-.lang-toggle {
-  display: flex; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 10px; overflow: hidden; flex-shrink: 0; height: 46px;
-}
-.lang-btn {
-  background: none; border: none; color: var(--muted);
-  font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 500;
-  padding: 0 14px; cursor: pointer; transition: all 0.15s;
-}
-.lang-btn.active { background: var(--surface3); color: var(--text); }
-
-.btn-generate {
-  flex: 1; height: 46px; background: var(--accent); border: none; border-radius: 10px;
+/* Button */
+.btn-primary {
+  width: 100%; height: 46px; background: var(--accent); border: none; border-radius: 10px;
   color: #fff8f1; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700;
-  letter-spacing: 0.01em; cursor: pointer;
-  transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
+  cursor: pointer; transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
   display: flex; align-items: center; justify-content: center; gap: 8px;
 }
-.btn-generate:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(122,62,72,0.22); }
-.btn-generate:active { transform: none; box-shadow: none; }
-.btn-generate:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(122,62,72,0.22); }
+.btn-primary:active { transform: none; box-shadow: none; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 
 .spinner {
   width: 15px; height: 15px; border: 2px solid rgba(255,248,241,0.3); border-top-color: #fff8f1;
@@ -160,29 +190,71 @@ textarea:focus {
 
 .error-msg {
   background: rgba(248,113,113,0.07); border: 1px solid rgba(248,113,113,0.18);
-  border-radius: var(--radius); color: #fca5a5; font-size: 13px;
+  border-radius: var(--radius); color: #c05050; font-size: 13px;
   padding: 12px 16px; margin-top: 12px; display: none; line-height: 1.5;
 }
 
-/* Result */
+/* Questions panel */
+.questions-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); padding: 28px; display: none;
+  animation: fadeUp 0.4s ease both; position: relative; margin-bottom: 12px;
+  box-shadow: 0 2px 24px rgba(122,62,72,0.06);
+}
+
+.questions-card .card-shine {
+  background: linear-gradient(90deg, transparent, rgba(195,144,130,0.45), transparent);
+}
+
+.questions-intro {
+  font-size: 13px; color: var(--muted2); font-style: italic;
+  margin-bottom: 20px; line-height: 1.6;
+}
+
+.question-item {
+  margin-bottom: 18px;
+}
+
+.question-label {
+  font-size: 12px; font-weight: 600; color: var(--text);
+  margin-bottom: 7px; display: block; line-height: 1.4;
+}
+
+.question-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text);
+  font-family: 'Montserrat', sans-serif; font-size: 14px;
+  font-weight: 300; padding: 11px 14px; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.question-input::placeholder { color: var(--muted); }
+.question-input:focus {
+  border-color: rgba(122,62,72,0.3);
+  box-shadow: 0 0 0 3px rgba(122,62,72,0.06);
+}
+
+/* Result card */
 .result-card {
   background: var(--surface); border: 1px solid var(--border2);
   border-radius: var(--radius-lg); padding: 28px; display: none;
   animation: fadeUp 0.4s ease both; position: relative; margin-bottom: 12px;
   box-shadow: 0 2px 24px rgba(122,62,72,0.06);
 }
+
 .result-shine {
   position: absolute; top: 0; left: 50%; transform: translateX(-50%);
   width: 45%; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(195,144,130,0.5), transparent);
 }
+
 .result-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+
 .result-label {
-  font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700;
-  letter-spacing: 0.14em; text-transform: uppercase; color: var(--purple);
-  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--purple); display: flex; align-items: center; gap: 8px;
 }
 .pulse-dot { width: 6px; height: 6px; background: var(--purple); border-radius: 50%; animation: pulseDot 2s infinite; }
+
 .result-btns { display: flex; gap: 6px; }
 .btn-sm {
   background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
@@ -192,75 +264,49 @@ textarea:focus {
 }
 .btn-sm:hover { border-color: var(--border2); color: var(--text); }
 .btn-sm.copied { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); font-weight: 600; }
-.result-instruction {
-  font-size: 12px;
-  color: var(--muted2);
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 9px 13px;
-  margin-bottom: 14px;
-  line-height: 1.5;
-}
-.result-instruction strong { color: var(--accent); font-weight: 600; }
 
-.result-text { font-size: 15px; font-weight: 300; line-height: 1.8; color: var(--text); white-space: pre-wrap; min-height: 40px; }
-.result-text ul {
-  margin: 8px 0 8px 4px;
-  padding-left: 18px;
-  list-style: none;
+.result-text {
+  font-size: 15px; font-weight: 300; line-height: 1.8; color: var(--text);
+  white-space: pre-wrap; min-height: 40px;
 }
-.result-text ul li {
-  position: relative;
-  padding-left: 14px;
-  margin-bottom: 5px;
-  line-height: 1.6;
-}
-.result-text ul li::before {
-  content: '–';
-  position: absolute;
-  left: 0;
-  color: var(--purple);
-  font-weight: 600;
-}
-.result-text strong {
-  font-weight: 600;
-  color: var(--accent);
-  letter-spacing: 0.01em;
-}
-.result-text br + br { display: none; }
 
 .cursor-blink {
   display: inline-block; width: 2px; height: 1.1em; background: var(--accent);
   margin-left: 1px; vertical-align: middle; animation: blink 0.75s step-end infinite;
 }
+
+.result-text ul { margin: 8px 0 8px 4px; padding-left: 18px; list-style: none; }
+.result-text ul li { position: relative; padding-left: 14px; margin-bottom: 5px; line-height: 1.6; }
+.result-text ul li::before { content: '–'; position: absolute; left: 0; color: var(--purple); font-weight: 600; }
+.result-text strong { font-weight: 600; color: var(--accent); letter-spacing: 0.01em; }
+.result-text br + br { display: none; }
+
 .platforms { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
 .platforms-label { font-size: 13px; color: var(--muted2); font-style: italic; line-height: 1.5; }
 
-/* History */
-.history-wrap { animation: fadeUp 0.55s ease 0.12s both; display: none; margin-top: 8px; }
-.history-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.history-title-row {
-  font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700;
-  letter-spacing: 0.14em; text-transform: uppercase; color: var(--text);
-  display: flex; align-items: center; gap: 8px;
+.btn-restart {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 1px solid var(--border); border-radius: 8px;
+  color: var(--muted2); font-family: 'Montserrat', sans-serif; font-size: 12px;
+  font-weight: 500; padding: 7px 13px; cursor: pointer; transition: all 0.15s;
+  margin-top: 16px;
 }
-.badge-count { background: var(--accent); border-radius: 100px; font-size: 10px; padding: 2px 8px; color: #fff8f1; font-weight: 600; }
-.btn-clear { background: none; border: none; color: var(--muted); font-size: 11px; cursor: pointer; padding: 4px 8px; border-radius: 6px; font-family: 'Montserrat', sans-serif; transition: color 0.15s; }
-.btn-clear:hover { color: #a05050; }
-.history-items { display: flex; flex-direction: column; gap: 8px; }
-.h-item {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius); padding: 16px 18px; cursor: pointer; transition: all 0.18s;
-  box-shadow: 0 2px 12px rgba(122,62,72,0.05);
-}
-.h-item:hover { border-color: var(--accent); background: var(--surface2); box-shadow: 0 4px 20px rgba(122,62,72,0.1); transform: translateY(-1px); }
-.h-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.h-time { font-size: 10px; color: var(--muted); font-weight: 500; }
-.h-input { font-size: 12px; color: var(--accent); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px; }
-.h-prompt { font-size: 13px; color: var(--muted2); font-weight: 300; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.55; }
+.btn-restart:hover { border-color: var(--border2); color: var(--text); }
 
+/* Lang toggle */
+.lang-toggle {
+  display: flex; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden; flex-shrink: 0; height: 46px; width: fit-content;
+  margin-bottom: 20px;
+}
+.lang-btn {
+  background: none; border: none; color: var(--muted);
+  font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 500;
+  padding: 0 16px; cursor: pointer; transition: all 0.15s;
+}
+.lang-btn.active { background: var(--surface3); color: var(--text); }
+
+/* Footer */
 .footer { text-align: center; margin-top: 52px; color: var(--muted); font-size: 11px; letter-spacing: 0.04em; line-height: 1.8; }
 .footer a { color: var(--muted2); text-decoration: none; }
 .footer a:hover { color: var(--text); }
@@ -279,190 +325,129 @@ textarea:focus {
 <div class="container">
 
   <div class="header">
-    <a class="back-link" href="https://chillionaires.club">Chillionaires</a>
-    <h1>Prompt<br><span class="lime">Generator</span></h1>
-    <p class="subtitle">Typ gewoon wat je wilt bereiken — in je eigen woorden. Wij maken er in seconden een scherpe prompt van die élk AI-model begrijpt.</p>
+    <a class="back-link" href="https://chillionaires.club">Chillionaires Club</a>
+    <h1>Prompt<br><span class="accent">Generator</span></h1>
+    <p class="subtitle">Typ wat je wilt bereiken — wij stellen de juiste vragen en maken er een kant-en-klare prompt van.</p>
   </div>
 
-  <div class="card">
+  <!-- Steps -->
+  <div class="steps" id="stepsBar">
+    <div class="step active" id="step1">
+      <div class="step-num">1</div>
+      <span>Jouw wens</span>
+    </div>
+    <div class="step-divider"></div>
+    <div class="step" id="step2">
+      <div class="step-num">2</div>
+      <span>Jouw situatie</span>
+    </div>
+    <div class="step-divider"></div>
+    <div class="step" id="step3">
+      <div class="step-num">3</div>
+      <span>Jouw prompt</span>
+    </div>
+  </div>
+
+  <!-- Step 1: Input -->
+  <div class="card" id="card1">
     <div class="card-shine"></div>
+
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btn-nl" onclick="setLang('nl')">🇳🇱 NL</button>
+      <button class="lang-btn" id="btn-en" onclick="setLang('en')">🇬🇧 EN</button>
+    </div>
+
     <span class="input-label">Wat wil je bereiken?</span>
-    <textarea id="userInput" placeholder="Bijv: ik wil een weekje naar Lissabon, geef me een reisplan..." rows="5"></textarea>
+    <textarea id="userInput" placeholder="Bijv: ik wil een weekje naar Lissabon..." rows="4"></textarea>
 
     <span class="examples-label">Of kies een voorbeeld</span>
     <div class="examples-row" id="examplesRow"></div>
 
-    <div class="controls-row">
-      <div class="lang-toggle">
-        <button class="lang-btn active" id="btn-nl" onclick="setLang('nl')">🇳🇱 NL</button>
-        <button class="lang-btn" id="btn-en" onclick="setLang('en')">🇬🇧 EN</button>
-      </div>
-      <button class="btn-generate" id="generateBtn" onclick="generatePrompt()">
-        <div class="spinner" id="spinner"></div>
-        <span id="btnText">Maak mijn prompt →</span>
-      </button>
-    </div>
-    <div class="hint">⌘ + Enter om te genereren</div>
-    <div class="error-msg" id="errorMsg"></div>
+    <button class="btn-primary" id="btn1" onclick="getQuestions()">
+      <div class="spinner" id="spinner1"></div>
+      <span id="btnText1">Volgende stap →</span>
+    </button>
+    <div class="hint">⌘ + Enter om door te gaan</div>
+    <div class="error-msg" id="errorMsg1"></div>
   </div>
 
-  <div class="result-card" id="resultCard">
+  <!-- Step 2: Questions -->
+  <div class="questions-card" id="card2">
+    <div class="card-shine"></div>
+    <p class="questions-intro" id="questionsIntro">Beantwoord even deze vragen — dan maken we er een perfecte prompt van.</p>
+    <div id="questionsList"></div>
+    <button class="btn-primary" id="btn2" onclick="generatePrompt()">
+      <div class="spinner" id="spinner2"></div>
+      <span id="btnText2">Maak mijn prompt →</span>
+    </button>
+    <div class="error-msg" id="errorMsg2"></div>
+  </div>
+
+  <!-- Step 3: Result -->
+  <div class="result-card" id="card3">
     <div class="result-shine"></div>
     <div class="result-top">
       <div class="result-label"><div class="pulse-dot"></div>Jouw prompt</div>
       <div class="result-btns">
-        <button class="btn-sm" onclick="generatePrompt()">↺ Opnieuw</button>
         <button class="btn-sm" id="copyBtn" onclick="copyPrompt()">📋 Kopieer</button>
       </div>
     </div>
-    <div class="result-instruction">✏️ Vul de <strong>[...]</strong> onderdelen in met jouw eigen situatie voordat je de prompt gebruikt.</div>
     <div class="result-text" id="resultText"></div>
     <div class="platforms">
-      <span class="platforms-label">📋 Kopieer de prompt hierboven en plak hem in ChatGPT, Claude, Gemini of een ander AI-model naar keuze.</span>
+      <p class="platforms-label">📋 Kopieer de prompt en plak hem in ChatGPT, Claude, Gemini of een ander AI-model naar keuze.</p>
     </div>
-  </div>
-
-  <div class="history-wrap" id="historyWrap">
-    <div class="history-head">
-      <div class="history-title-row">Eerdere prompts <span class="badge-count" id="historyCount">0</span></div>
-      <button class="btn-clear" onclick="clearHistory()">Wis alles</button>
-    </div>
-    <div class="history-items" id="historyItems"></div>
+    <button class="btn-restart" onclick="restart()">↺ Nieuwe prompt maken</button>
   </div>
 
   <div class="footer">
-    Een tool uit de <a href="https://chillionaires.club">Chillionaires AI Guide</a><br>
-    Werkt met ChatGPT · Claude · Gemini · Copilot
+    Een tool uit de <a href="https://chillionaires.club">Chillionaires Club</a> · Werkt met ChatGPT · Claude · Gemini · Copilot
   </div>
 
 </div>
 
 <script>
-// API key wordt veilig bewaard op de server, niet hier // ← vervang dit voor lokaal testen
 const API_URL = '/api/generate';
-
 let lang = 'nl';
+let userWish = '';
 let generatedPrompt = '';
-let history = [];
-try { history = JSON.parse(localStorage.getItem('pg_history') || '[]'); } catch(e) {}
+let questionsData = [];
 
 const examples = {
   nl: [
     'Weekje naar Lissabon plannen ✈️',
-    'Hulp bij stoppen met suiker',
+    'Beter slapen en meer energie',
     'Meer sparen, waar begin ik?',
-    'Praten met mijn tiener over stress',
-    'Omgaan met het verlies van mijn moeder',
-    'Mijn prijzen verhogen zonder klanten te verliezen',
     'Mijn eerste online cursus lanceren',
-    'Meer klanten aantrekken zonder groot budget',
+    'Meer klanten aantrekken',
+    'Omgaan met het verlies van mijn moeder',
+    'Mijn prijzen verhogen',
+    'Gezonder eten zonder gedoe 🥗',
   ],
   en: [
     'Plan a week in Lisbon ✈️',
-    'Help me quit sugar',
+    'Sleep better and have more energy',
     'Save more money — where to start?',
-    'Talk to my teenager about stress',
-    'Coping with the loss of my mother',
-    'Raise my prices without losing clients',
     'Launch my first online course',
-    'Attract more clients without a big budget',
+    'Attract more clients',
+    'Coping with the loss of my mother',
+    'Raise my prices',
+    'Eat healthier without overthinking 🥗',
   ]
-};
-
-const systemPrompts = {
-  nl: `Je bent een expert prompt-engineer die gewone mensen en ondernemers helpt het beste uit AI-modellen te halen. Iemand geeft je een ruwe gedachte of wens — jij analyseert die eerst en schrijft dan automatisch een op maat gemaakte prompt. Je bepaalt zelf wat het onderwerp is en past je aanpak daarop aan.
-
-Stap 1 — Detecteer het onderwerp automatisch:
-Lees de vraag en bepaal zelf welk type het is:
-- Dagelijks leven: routines, thuisorganisatie, gewoontes, tijdsbeheer
-- Gezondheid & welzijn: slaap, voeding, beweging, stress, mentale gezondheid
-- Persoonlijke groei: zelfvertrouwen, grenzen, mindset, doelen, angsten
-- Reizen & vrije tijd: vakanties, uitjes, planning
-- Relaties & communicatie: gesprekken, conflicten, familie, vriendschap
-- Geld & financiën: sparen, budgetteren, schulden, investeren
-- Cursussen & kennisproducten: online cursus, e-book, webinar, lancering
-- Marketing & verkoop: klanten, teksten, positionering, conversie
-- Strategie & groei: business, prijzen, schaalbaarheid, visie
-- Creatief & content: social media, schrijven, ideeën, campagnes
-
-Stap 2 — Kies de meest impactvolle context voor DIT onderwerp:
-Denk na: welke 3-4 details maken het verschil tussen een generiek en een persoonlijk antwoord? Dit verschilt per onderwerp:
-- Gezondheid: huidige situatie, wat al geprobeerd, levensstijl, doel
-- Business: type business, doelgroep, huidige uitdaging, gewenst resultaat
-- Reizen: gezelschap, budget, reistype, bijzondere wensen
-- Persoonlijke groei: wat wil je bereiken, wat houdt je tegen, gewenste aanpak
-- Enzovoort — gebruik je eigen oordeel
-
-Stap 3 — Schrijf de prompt met deze vaste structuur:
-
-[Één krachtige openingszin die de vraag scherp en specifiek formuleert]
-
-**Mijn situatie:**
-- [Meest cruciale placeholder voor dit onderwerp]
-- [Tweede placeholder]
-- [Derde placeholder]
-- [Vierde placeholder — alleen als echt nodig]
-- [Vijfde placeholder — alleen bij complexe zakelijke vragen]
-
-[Één concrete afsluitzin met een specifieke opdracht — afgestemd op wat deze persoon wil bereiken]
-
-Regels:
-- 3 placeholders voor simpele vragen, 4-5 voor complexe vragen
-- Keuze-placeholders: [omschrijving: optie1 / optie2 / optie3]
-- Open placeholders: [omschrijving: ...]
-- Bij gevoelige onderwerpen (rouw, mentale gezondheid, relaties): warme empathische toon
-- Bij zakelijke vragen: resultaatgericht en concreet
-- Menselijke warme taal — geen jargon
-- Alleen de prompt — geen uitleg eromheen`,
-
-  en: `You are an expert prompt engineer helping everyday people and entrepreneurs get the most out of AI models. Someone gives you a rough thought — you analyze it first and automatically write a tailor-made prompt. You determine the topic yourself and adapt your approach accordingly.
-
-Step 1 — Automatically detect the topic:
-Read the question and determine what type it is:
-- Daily life: routines, home organization, habits, time management
-- Health & wellbeing: sleep, nutrition, movement, stress, mental health
-- Personal growth: self-confidence, boundaries, mindset, goals, fears
-- Travel & leisure: holidays, trips, planning
-- Relationships & communication: conversations, conflicts, family, friendship
-- Money & finances: saving, budgeting, debt, investing
-- Courses & knowledge products: online course, e-book, webinar, launch
-- Marketing & sales: clients, copy, positioning, conversion
-- Strategy & growth: business, pricing, scalability, vision
-- Creative & content: social media, writing, ideas, campaigns
-
-Step 2 — Choose the most impactful context for THIS topic:
-Think: which 3-4 details make the difference between a generic and a personal answer?
-
-Step 3 — Write the prompt with this fixed structure:
-
-[One powerful opening sentence that formulates the question sharply]
-
-**My situation:**
-- [Most crucial placeholder for this topic]
-- [Second placeholder]
-- [Third placeholder]
-- [Fourth placeholder — only if truly needed]
-- [Fifth placeholder — only for complex business questions]
-
-[One concrete closing sentence with a specific instruction]
-
-Rules:
-- 3 placeholders for simple questions, 4-5 for complex ones
-- Choice placeholders: [description: option1 / option2 / option3]
-- Open placeholders: [description: ...]
-- For sensitive topics: warm empathetic tone
-- For business questions: results-focused and concrete
-- Natural warm language — no jargon
-- Return only the prompt — no explanation`
 };
 
 document.addEventListener('DOMContentLoaded', () => {
   renderExamples();
-  renderHistory();
   document.getElementById('userInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) generatePrompt();
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) getQuestions();
   });
 });
+
+function setLang(l) {
+  lang = l;
+  document.getElementById('btn-nl').classList.toggle('active', l === 'nl');
+  document.getElementById('btn-en').classList.toggle('active', l === 'en');
+  renderExamples();
+}
 
 function renderExamples() {
   document.getElementById('examplesRow').innerHTML = examples[lang].map(ex =>
@@ -476,22 +461,37 @@ function fillExample(el) {
   document.getElementById('userInput').focus();
 }
 
-function setLang(l) {
-  lang = l;
-  document.getElementById('btn-nl').classList.toggle('active', l === 'nl');
-  document.getElementById('btn-en').classList.toggle('active', l === 'en');
-  renderExamples();
-}
-
-async function generatePrompt() {
+// Step 1: Get questions from Claude
+async function getQuestions() {
   const input = document.getElementById('userInput').value.trim();
   if (!input) {
-    showError(lang === 'nl' ? 'Vul eerst in wat je wilt bereiken.' : 'Please describe what you want to achieve.');
+    showError('errorMsg1', lang === 'nl' ? 'Vul eerst in wat je wilt bereiken.' : 'Please describe what you want to achieve.');
     return;
   }
-  setLoading(true);
-  hideError();
-  document.getElementById('resultCard').style.display = 'none';
+
+  userWish = input;
+  setLoading('btn1', 'spinner1', 'btnText1', true, lang === 'nl' ? 'Even denken...' : 'Thinking...');
+  hideError('errorMsg1');
+
+  const systemPrompt = lang === 'nl'
+    ? `Je bent een slimme assistent die bepaalt welke vragen nodig zijn om een perfecte AI-prompt te maken. Een gebruiker geeft je een wens of doel. Jij analyseert dit en bedenkt 4-6 gerichte vragen die de meest cruciale context ophalen.
+
+Regels:
+- Stel alleen vragen die echt het verschil maken voor een goed antwoord
+- Houd vragen kort en menselijk — geen jargon
+- Geef bij elke vraag een korte placeholder als hint (bijv. "bijv. met partner, budget €1000")
+- Reageer ALLEEN met een JSON array, geen uitleg, geen tekst eromheen
+- Format: [{"question": "Vraag hier?", "placeholder": "hint hier", "type": "text"}]
+- Type is altijd "text"`
+    : `You are a smart assistant that determines which questions are needed to create a perfect AI prompt. A user gives you a wish or goal. You analyze this and come up with 4-6 targeted questions that gather the most crucial context.
+
+Rules:
+- Only ask questions that truly make a difference for a good answer
+- Keep questions short and human — no jargon
+- Give each question a short placeholder as a hint (e.g. "e.g. with partner, budget €1000")
+- Respond ONLY with a JSON array, no explanation, no text around it
+- Format: [{"question": "Question here?", "placeholder": "hint here", "type": "text"}]
+- Type is always "text"`;
 
   try {
     const res = await fetch(API_URL, {
@@ -500,8 +500,97 @@ async function generatePrompt() {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1000,
-        system: systemPrompts[lang],
+        system: systemPrompt,
         messages: [{ role: 'user', content: input }]
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || `API fout (${res.status})`);
+
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    const clean = text.replace(/```json|```/g, '').trim();
+    questionsData = JSON.parse(clean);
+
+    showQuestions(questionsData);
+    setStep(2);
+
+  } catch (err) {
+    showError('errorMsg1', lang === 'nl' ? `Er ging iets mis: ${err.message}` : `Something went wrong: ${err.message}`);
+    console.error(err);
+  } finally {
+    setLoading('btn1', 'spinner1', 'btnText1', false, lang === 'nl' ? 'Volgende stap →' : 'Next step →');
+  }
+}
+
+function showQuestions(questions) {
+  const list = document.getElementById('questionsList');
+  list.innerHTML = questions.map((q, i) => `
+    <div class="question-item">
+      <label class="question-label" for="q${i}">${q.question}</label>
+      <input class="question-input" type="text" id="q${i}" placeholder="${q.placeholder || ''}" />
+    </div>
+  `).join('');
+
+  document.getElementById('card2').style.display = 'block';
+  setTimeout(() => document.getElementById('card2').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+
+  // Enter on last field triggers generate
+  const inputs = list.querySelectorAll('input');
+  inputs[inputs.length - 1]?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') generatePrompt();
+  });
+}
+
+// Step 2: Generate full prompt
+async function generatePrompt() {
+  const answers = questionsData.map((q, i) => {
+    const val = document.getElementById(`q${i}`)?.value.trim();
+    return `${q.question} → ${val || '(niet ingevuld)'}`;
+  }).join('\n');
+
+  setLoading('btn2', 'spinner2', 'btnText2', true, lang === 'nl' ? 'Prompt maken...' : 'Creating prompt...');
+  hideError('errorMsg2');
+
+  const systemPrompt = lang === 'nl'
+    ? `Je bent een expert prompt-engineer. Je krijgt een wens van een gebruiker én de antwoorden op een aantal context-vragen. Schrijf op basis daarvan een perfecte, volledig ingevulde prompt — zonder placeholders, zonder lege velden. De prompt is direct klaar om te kopiëren en plakken in ChatGPT, Claude of een ander AI-model.
+
+Structuur van de prompt:
+1. Één krachtige openingszin die de vraag scherp formuleert
+2. Alle relevante context verwerkt in vloeiende zinnen of een overzichtelijke situatiebeschrijving
+3. Een concrete afsluitzin met een specifieke opdracht aan het AI-model
+
+Regels:
+- Geen placeholders — alles is ingevuld
+- Menselijke, warme taal
+- Bij gevoelige onderwerpen: empathische toon
+- Bij zakelijke vragen: resultaatgericht
+- Alleen de prompt — geen uitleg eromheen`
+    : `You are an expert prompt engineer. You receive a user's wish and the answers to several context questions. Based on this, write a perfect, fully filled-in prompt — no placeholders, no empty fields. The prompt is ready to copy and paste directly into ChatGPT, Claude or any other AI model.
+
+Prompt structure:
+1. One powerful opening sentence that formulates the question sharply
+2. All relevant context woven into flowing sentences or a clear situation description
+3. A concrete closing sentence with a specific instruction to the AI model
+
+Rules:
+- No placeholders — everything is filled in
+- Natural, warm language
+- For sensitive topics: empathetic tone
+- For business questions: results-focused
+- Return only the prompt — no explanation`;
+
+  const userMessage = `Mijn wens: ${userWish}\n\nMijn situatie:\n${answers}`;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1200,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }]
       })
     });
 
@@ -513,58 +602,42 @@ async function generatePrompt() {
 
     generatedPrompt = text;
     showResult(text);
-    saveHistory(input, text);
+    setStep(3);
+
   } catch (err) {
-    showError(lang === 'nl' ? `Er ging iets mis: ${err.message}` : `Something went wrong: ${err.message}`);
+    showError('errorMsg2', lang === 'nl' ? `Er ging iets mis: ${err.message}` : `Something went wrong: ${err.message}`);
     console.error(err);
   } finally {
-    setLoading(false);
+    setLoading('btn2', 'spinner2', 'btnText2', false, lang === 'nl' ? 'Maak mijn prompt →' : 'Create my prompt →');
   }
 }
 
-function renderMarkdown(text) {
-  return text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*?<\/li>\n?)+/gs, m => '<ul>' + m + '</ul>')
-    .replace(/\n/g, '<br>');
-}
-
 function showResult(text) {
-  const card = document.getElementById('resultCard');
+  const card = document.getElementById('card3');
   const el = document.getElementById('resultText');
   card.style.display = 'block';
+  el.innerHTML = '';
 
-  // Typewriter on raw text, then render markdown at end
-  el.innerHTML = '<span class="cursor-blink"></span>';
-  const cursor = el.querySelector('.cursor-blink');
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor-blink';
+  el.appendChild(cursor);
+
   let i = 0;
-  let raw = '';
   const speed = text.length > 500 ? 5 : 10;
   const timer = setInterval(() => {
-    if (i < text.length) {
-      raw += text[i++];
-      cursor.insertAdjacentText('beforebegin', text[i-1]);
-    } else {
-      clearInterval(timer);
-      cursor.remove();
-      // Re-render as markdown after typewriter completes
-      el.innerHTML = renderMarkdown(text);
-    }
+    if (i < text.length) { el.insertBefore(document.createTextNode(text[i++]), cursor); }
+    else { clearInterval(timer); cursor.remove(); }
   }, speed);
+
   setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
 }
 
 function copyPrompt() {
   if (!generatedPrompt) return;
   const btn = document.getElementById('copyBtn');
-
-  // Modern clipboard API (werkt op https)
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(generatedPrompt).then(() => showCopied(btn));
   } else {
-    // Fallback voor lokaal / file://
     const ta = document.createElement('textarea');
     ta.value = generatedPrompt;
     ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
@@ -578,78 +651,38 @@ function copyPrompt() {
 function showCopied(btn) {
   btn.textContent = '✓ Gekopieerd!';
   btn.classList.add('copied');
-
-  // Show reminder
-  const instruction = document.querySelector('.result-instruction');
-  if (instruction) {
-    instruction.style.borderColor = 'rgba(122,62,72,0.4)';
-    instruction.style.color = 'var(--accent)';
-    instruction.innerHTML = '✏️ Vergeet niet de <strong>[...]</strong> onderdelen aan te passen voordat je plakt!';
-    setTimeout(() => {
-      instruction.style.borderColor = '';
-      instruction.style.color = '';
-      instruction.innerHTML = '✏️ Vul de <strong>[...]</strong> onderdelen in met jouw eigen situatie voordat je de prompt gebruikt.';
-    }, 3000);
-  }
-
   setTimeout(() => { btn.innerHTML = '📋 Kopieer'; btn.classList.remove('copied'); }, 2200);
 }
 
-function openPlatform(p) {
-  const urls = { chatgpt: 'https://chat.openai.com', claude: 'https://claude.ai', gemini: 'https://gemini.google.com', copilot: 'https://copilot.microsoft.com' };
-  window.open(urls[p], '_blank');
-}
-
-function saveHistory(input, prompt) {
-  const item = { id: Date.now(), input, prompt, lang, time: new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) };
-  history.unshift(item);
-  if (history.length > 15) history = history.slice(0, 15);
-  try { localStorage.setItem('pg_history', JSON.stringify(history)); } catch(e) {}
-  renderHistory();
-}
-
-function renderHistory() {
-  const wrap = document.getElementById('historyWrap');
-  if (history.length === 0) { wrap.style.display = 'none'; return; }
-  wrap.style.display = 'block';
-  document.getElementById('historyCount').textContent = history.length;
-  document.getElementById('historyItems').innerHTML = history.map(item => `
-    <div class="h-item" onclick="loadHistory(${item.id})">
-      <div class="h-meta"><span class="h-time">${item.time}</span><span style="font-size:10px;color:var(--muted)">· ${item.lang.toUpperCase()}</span></div>
-      <div class="h-input">↳ ${escHtml(item.input)}</div>
-      <div class="h-prompt">${escHtml(item.prompt)}</div>
-    </div>
-  `).join('');
-}
-
-function loadHistory(id) {
-  const item = history.find(h => h.id === id);
-  if (!item) return;
-  document.getElementById('userInput').value = item.input;
-  setLang(item.lang);
-  generatedPrompt = item.prompt;
-  showResult(item.prompt);
+function restart() {
+  document.getElementById('userInput').value = '';
+  document.getElementById('card2').style.display = 'none';
+  document.getElementById('card3').style.display = 'none';
+  document.getElementById('resultText').innerHTML = '';
+  questionsData = [];
+  generatedPrompt = '';
+  userWish = '';
+  setStep(1);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function clearHistory() {
-  history = [];
-  try { localStorage.removeItem('pg_history'); } catch(e) {}
-  renderHistory();
+function setStep(n) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById(`step${i}`);
+    el.classList.remove('active', 'done');
+    if (i < n) el.classList.add('done');
+    if (i === n) el.classList.add('active');
+  });
 }
 
-function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function setLoading(btnId, spinnerId, textId, on, loadingText) {
+  document.getElementById(spinnerId).style.display = on ? 'block' : 'none';
+  document.getElementById(textId).textContent = on ? loadingText : document.getElementById(textId).dataset.default || loadingText;
+  document.getElementById(btnId).disabled = on;
 }
 
-function setLoading(on) {
-  document.getElementById('spinner').style.display = on ? 'block' : 'none';
-  document.getElementById('btnText').textContent = on ? (lang === 'nl' ? 'Even geduld...' : 'Generating...') : 'Maak mijn prompt →';
-  document.getElementById('generateBtn').disabled = on;
-}
-
-function showError(msg) { const el = document.getElementById('errorMsg'); el.textContent = msg; el.style.display = 'block'; }
-function hideError() { document.getElementById('errorMsg').style.display = 'none'; }
+function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
+function hideError(id) { document.getElementById(id).style.display = 'none'; }
 </script>
 </body>
 </html>
