@@ -104,11 +104,13 @@ export default async function handler(req, res) {
     }
 
     // 4. Het juiste custom field opzoeken (op naam "Inloglink")
-    const fieldsRes = await fetch(`${acApiUrl}/api/3/fields`, {
+    const fieldsRes = await fetch(`${acApiUrl}/api/3/fields?limit=100`, {
       headers: { 'Api-Token': acApiKey },
     });
     const fieldsData = await fieldsRes.json();
-    const field = fieldsData.fields.find((f) => f.title === 'Inloglink');
+    const field = fieldsData.fields.find(
+      (f) => f.title.trim().toLowerCase() === 'inloglink'
+    );
 
     if (!field) {
       console.log('Veld "Inloglink" niet gevonden in ActiveCampaign');
