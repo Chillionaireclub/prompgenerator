@@ -453,9 +453,39 @@ sb.auth.onAuthStateChange((_event, session) => {
   updateGate();
 });
 
-sb.auth.getSession().then(({ data }) => {
+// Herkent een binnenkomende link (?token_hash=...&type=...) en rondt het
+// inloggen daarmee af — werkt ongeacht in welke browser de link geopend wordt.
+async function handleIncomingLink() {
+  const params = new URLSearchParams(window.location.search);
+  const tokenHash = params.get('token_hash');
+  const otpType = params.get('type');
+
+  if (!tokenHash || !otpType) return false;
+
+  const { data, error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type: otpType });
+
+  // Adresbalk opschonen, ongeacht het resultaat
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  if (error) {
+    document.getElementById('loginMsg').textContent =
+      'Deze link is verlopen of al gebruikt. Vraag hieronder een nieuwe aan.';
+    return false;
+  }
+
   currentSession = data.session;
-  updateGate();
+  return true;
+}
+
+handleIncomingLink().then((loggedInViaLink) => {
+  if (!loggedInViaLink) {
+    sb.auth.getSession().then(({ data }) => {
+      currentSession = data.session;
+      updateGate();
+    });
+  } else {
+    updateGate();
+  }
 });
 
 async function sendMagicLink() {
