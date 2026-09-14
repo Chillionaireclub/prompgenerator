@@ -285,6 +285,27 @@ textarea:focus {
 .platforms { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
 .platforms-label { font-size: 13px; color: var(--muted2); font-style: italic; line-height: 1.5; }
 
+.btn-copy-bottom {
+  width: 100%;
+  height: 46px;
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  color: #fff8f1;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+.btn-copy-bottom:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(122,62,72,0.22); }
+.btn-copy-bottom:active { transform: none; box-shadow: none; }
+
 .btn-restart {
   display: inline-flex; align-items: center; gap: 6px;
   background: none; border: 1px solid var(--border); border-radius: 8px;
@@ -417,8 +438,9 @@ textarea:focus {
     </div>
     <div class="result-text" id="resultText"></div>
     <div class="platforms">
-      <p class="platforms-label">📋 Kopieer de prompt en plak hem in ChatGPT, Claude, Gemini of een ander AI-model naar keuze.</p>
+      <p class="platforms-label">Kopieer de prompt en plak hem in ChatGPT, Claude, Gemini of een ander AI-model naar keuze.</p>
     </div>
+    <button class="btn-copy-bottom" onclick="copyPrompt()">📋 Kopieer prompt</button>
     <button class="btn-restart" onclick="restart()">↺ Nieuwe prompt maken</button>
   </div>
 
@@ -576,35 +598,21 @@ async function getQuestions() {
   hideError('errorMsg1');
 
   const systemPrompt = lang === 'nl'
-    ? `Je bent een scherpe assistent die bepaalt welke vervolgvragen nodig zijn om een perfecte AI-prompt te maken.
-
-Stap 1 — Analyseer de input:
-Extraheer uit de wens van de gebruiker alle al bekende informatie: feiten, voorkeuren, motivaties, omstandigheden, aantallen, tijdstippen, beperkingen. Schrijf dit intern op.
-
-Stap 2 — Bepaal wat nog ontbreekt:
-Stel alleen vragen waarvan het antwoord de eindprompt wezenlijk beter of persoonlijker maakt. Vraag nooit opnieuw naar informatie die al in de input staat. Er is geen minimum: als 2 vragen voldoende zijn, stel er dan 2. Maximum is 6.
-
-Stel bij persoonlijke of emotionele onderwerpen ook één vraag naar de gewenste benadering — zoals: "Zoek je praktisch advies, begrip, of allebei?" — maar alleen als dat daadwerkelijk de toon of inhoud van de prompt beïnvloedt.
+    ? `Je bent een slimme assistent die bepaalt welke vragen nodig zijn om een perfecte AI-prompt te maken. Een gebruiker geeft je een wens of doel. Jij analyseert dit en bedenkt 4-6 gerichte vragen die de meest cruciale context ophalen.
 
 Regels:
+- Stel alleen vragen die echt het verschil maken voor een goed antwoord
 - Houd vragen kort en menselijk — geen jargon
-- Geef bij elke vraag een korte placeholder als hint
+- Geef bij elke vraag een korte placeholder als hint (bijv. "bijv. met partner, budget €1000")
 - Reageer ALLEEN met een JSON array, geen uitleg, geen tekst eromheen
 - Format: [{"question": "Vraag hier?", "placeholder": "hint hier", "type": "text"}]
 - Type is altijd "text"`
-    : `You are a sharp assistant that determines which follow-up questions are needed to create a perfect AI prompt.
-
-Step 1 — Analyze the input:
-Extract from the user's wish all already known information: facts, preferences, motivations, circumstances, numbers, times, constraints. Note this internally.
-
-Step 2 — Determine what is still missing:
-Only ask questions whose answers would meaningfully improve or personalize the final prompt. Never ask again about information already given in the input. There is no minimum: if 2 questions are sufficient, ask 2. Maximum is 6.
-
-For personal or emotional topics, also ask one question about the desired approach — such as: "Are you looking for practical advice, understanding, or both?" — but only if that genuinely affects the tone or content of the prompt.
+    : `You are a smart assistant that determines which questions are needed to create a perfect AI prompt. A user gives you a wish or goal. You analyze this and come up with 4-6 targeted questions that gather the most crucial context.
 
 Rules:
+- Only ask questions that truly make a difference for a good answer
 - Keep questions short and human — no jargon
-- Give each question a short placeholder as a hint
+- Give each question a short placeholder as a hint (e.g. "e.g. with partner, budget €1000")
 - Respond ONLY with a JSON array, no explanation, no text around it
 - Format: [{"question": "Question here?", "placeholder": "hint here", "type": "text"}]
 - Type is always "text"`;
@@ -672,39 +680,33 @@ async function generatePrompt() {
   hideError('errorMsg2');
 
   const systemPrompt = lang === 'nl'
-    ? `Je bent een expert prompt-engineer. Je krijgt een wens van een gebruiker én hun antwoorden op vervolgvragen. Schrijf op basis daarvan een scherpe, volledig ingevulde prompt — zonder placeholders — die direct bruikbaar is in ChatGPT, Claude of een ander AI-model.
+    ? `Je bent een expert prompt-engineer. Je krijgt een wens van een gebruiker én de antwoorden op een aantal context-vragen. Schrijf op basis daarvan een perfecte, volledig ingevulde prompt — zonder placeholders, zonder lege velden. De prompt is direct klaar om te kopiëren en plakken in ChatGPT, Claude of een ander AI-model.
 
-Hoe je de informatie verwerkt:
-- Gebruik uitsluitend feiten, voorkeuren, motivaties en omstandigheden die de gebruiker daadwerkelijk heeft genoemd. Voeg geen nieuwe informatie over de gebruiker toe die niet uit de input volgt.
-- Je mag de gegeven informatie wél intelligent vertalen naar instructies voor het AI-model. Voorbeeld: als iemand aangeeft rust en natuur belangrijk te vinden, mag je instrueren om een rustig reistempo te hanteren. Je mag daar niet van maken dat iemand niet van steden houdt als dat niet is gezegd.
-- Leid uit de antwoorden relevante prioriteiten, besliscriteria en instructies af voor het AI-model — maar creëer geen nieuwe feiten over de gebruiker.
-
-Structuur:
-1. Één openingszin die de kern van de vraag scherp formuleert
-2. De relevante context, zo beknopt mogelijk — elke zin moet iets toevoegen dat de prompt beter maakt. Geen herhaling tussen alinea's.
+Structuur van de prompt:
+1. Één krachtige openingszin die de vraag scherp formuleert
+2. Alle relevante context verwerkt in vloeiende zinnen of een overzichtelijke situatiebeschrijving
 3. Een concrete afsluitzin met een specifieke opdracht aan het AI-model
 
-Overige regels:
+Regels:
 - Geen placeholders — alles is ingevuld
-- Maak de prompt zo kort als mogelijk en zo uitgebreid als nodig
-- Menselijke, warme taal; bij gevoelige onderwerpen empathisch; bij zakelijke vragen resultaatgericht
+- Schrijf de prompt ALTIJD in de eerste persoon (ik, mijn, me) — alsof de gebruiker hem zelf typt. Nooit "de gebruiker", "de reiziger", "hij" of "zij"
+- Menselijke, warme taal
+- Bij gevoelige onderwerpen: empathische toon
+- Bij zakelijke vragen: resultaatgericht
 - Alleen de prompt — geen uitleg eromheen`
-    : `You are an expert prompt engineer. You receive a user's wish and their answers to follow-up questions. Based on this, write a sharp, fully filled-in prompt — no placeholders — that is immediately usable in ChatGPT, Claude or any other AI model.
+    : `You are an expert prompt engineer. You receive a user's wish and the answers to several context questions. Based on this, write a perfect, fully filled-in prompt — no placeholders, no empty fields. The prompt is ready to copy and paste directly into ChatGPT, Claude or any other AI model.
 
-How to process the information:
-- Use only facts, preferences, motivations and circumstances the user has actually mentioned. Do not add new information about the user that does not follow from the input.
-- You may intelligently translate given information into instructions for the AI model. Example: if someone says they value rest and nature, you may instruct the AI to suggest a relaxed travel pace. You may not conclude they dislike cities if that was not stated.
-- Derive relevant priorities, decision criteria and instructions for the AI model from the answers — but do not create new facts about the user.
-
-Structure:
-1. One opening sentence that sharply formulates the core of the request
-2. The relevant context, as concise as possible — every sentence must add something that improves the prompt. No repetition between paragraphs.
+Prompt structure:
+1. One powerful opening sentence that formulates the question sharply
+2. All relevant context woven into flowing sentences or a clear situation description
 3. A concrete closing sentence with a specific instruction to the AI model
 
-Other rules:
+Rules:
 - No placeholders — everything is filled in
-- Make the prompt as short as possible and as detailed as necessary
-- Natural, warm language; empathetic for sensitive topics; results-focused for business questions
+- ALWAYS write the prompt in the first person (I, my, me) — as if the user is typing it themselves. Never "the user", "the traveler", "he" or "she"
+- Natural, warm language
+- For sensitive topics: empathetic tone
+- For business questions: results-focused
 - Return only the prompt — no explanation`;
 
   const userMessage = `Mijn wens: ${userWish}\n\nMijn situatie:\n${answers}`;
