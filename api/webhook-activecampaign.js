@@ -32,6 +32,8 @@ export default async function handler(req, res) {
 
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseSecret = process.env.SUPABASE_SECRET_KEY;
+  const acApiUrl = process.env.AC_API_URL;
+  const acApiKey = process.env.AC_API_KEY;
 
   try {
     // 1. Rij in Supabase aanmaken of bijwerken
@@ -84,38 +86,59 @@ export default async function handler(req, res) {
     const linkData = await linkRes.json();
     const loginUrl = `https://app.chillionaires.club/?token_hash=${linkData.hashed_token}&type=email`;
 
-    // 3. Onze eigen welkomstmail versturen via Resend
-    const productNaam = toegangType.startsWith('guide') ? 'jouw guide' : 'de Prompt Generator';
+    // 3. De juiste contactpersoon opzoeken in ActiveCampaign (via e-mailadres)
+    const contactRes = await fetch(
+      `${acApiUrl}/api/3/contacts?email=${encodeURIComponent(email)}`,
+      { headers: { 'Api-Token': acApiKey } }
+    );
+    const contactData = await contactRes.json();
+    const contact = contactData.contacts && contactData.contacts[0];
 
-    const emailHtml = `
-      <div style="background:#fff8f1;padding:40px 20px;font-family:Helvetica,Arial,sans-serif;">
-        <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:22px;padding:36px;border:1px solid rgba(122,62,72,0.15);">
-          <h1 style="color:#2e1a1a;font-size:26px;margin:0 0 8px;">Je bent binnen! 🎉</h1>
-          <p style="color:#7a5c50;font-size:15px;line-height:1.6;">Bedankt voor je aankoop van ${productNaam}. Je hebt nu ${maanden} maanden toegang tot de Prompt Generator.</p>
-          <a href="${loginUrl}" style="display:inline-block;margin-top:20px;background:#7a3e48;color:#fff8f1;text-decoration:none;font-weight:bold;padding:14px 28px;border-radius:10px;">Ga naar de generator →</a>
-          <p style="color:#a08070;font-size:12px;margin-top:28px;">Deze link werkt eenmalig. Kom je later terug? Vul dan gewoon opnieuw je e-mailadres in op app.chillionaires.club voor een nieuwe inloglink.</p>
-        </div>
-      </div>
-    `;
+    if (!contact) {
+      console.log('Contact niet gevonden in ActiveCampaign voor e-mail:', email);
+      return res.status(200).json({
+        success: true,
+        warning: 'Rij in Supabase staat goed, maar contact niet gevonden in ActiveCampaign',
+        email,
+      });
+    }
 
-    const sendRes = await fetch('https://api.resend.com/emails', {
+    // 4. Het juiste custom field opzoeken (op naam "Inloglink")
+    const fieldsRes = await fetch(`${acApiUrl}/api/3/fields`, {
+      headers: { 'Api-Token': acApiKey },
+    });
+    const fieldsData = await fieldsRes.json();
+    const field = fieldsData.fields.find((f) => f.title === 'Inloglink');
+
+    if (!field) {
+      console.log('Veld "Inloglink" niet gevonden in ActiveCampaign');
+      return res.status(200).json({
+        success: true,
+        warning: 'Rij in Supabase staat goed, maar veld "Inloglink" bestaat niet in ActiveCampaign',
+        email,
+      });
+    }
+
+    // 5. De link in dat veld zetten bij het contact
+    const fieldValueRes = await fetch(`${acApiUrl}/api/3/fieldValues`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Api-Token': acApiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Chillionaires <welkom@auth.chillionaires.club>',
-        to: [email],
-        subject: 'Je bent binnen! Hier is je toegang 🎉',
-        html: emailHtml,
+        fieldValue: {
+          contact: contact.id,
+          field: field.id,
+          value: loginUrl,
+        },
       }),
     });
 
-    if (!sendRes.ok) {
-      const errText = await sendRes.text();
-      console.log('Kon welkomstmail niet versturen:', errText);
-      return res.status(500).json({ error: 'Kon welkomstmail niet versturen', details: errText });
+    if (!fieldValueRes.ok) {
+      const errText = await fieldValueRes.text();
+      console.log('Kon veld niet bijwerken in ActiveCampaign:', errText);
+      return res.status(500).json({ error: 'Kon ActiveCampaign niet bijwerken', details: errText });
     }
 
     return res.status(200).json({
@@ -123,6 +146,7 @@ export default async function handler(req, res) {
       email,
       toegangType,
       einddatum: toDateString(einddatum),
+      loginUrl,
     });
   } catch (err) {
     console.log('Onverwachte fout:', err.message);
