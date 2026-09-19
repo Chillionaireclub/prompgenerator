@@ -1,5 +1,12 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" }
+  ],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://app.chillionaires.club/$1",
+      "permanent": true
+    }
   ]
 }
