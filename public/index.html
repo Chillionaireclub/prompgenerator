@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prompt Generator Pro — Chillionaires</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -332,6 +333,9 @@ textarea:focus {
 .footer a { color: var(--muted2); text-decoration: none; }
 .footer a:hover { color: var(--text); }
 
+/* Login gate */
+.login-msg { margin-top: 14px; font-size: 13px; color: var(--muted2); line-height: 1.5; }
+
 @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
@@ -343,7 +347,44 @@ textarea:focus {
 <div class="blob blob-a"></div>
 <div class="blob blob-b"></div>
 
-<div class="container">
+<!-- LOGIN GATE: zichtbaar zolang iemand niet is ingelogd -->
+<div class="container" id="loginGate" style="display:none;">
+  <div class="header">
+    <h1>Prompt<br><span class="accent">Generator</span></h1>
+    <p class="subtitle" id="loginSubtitle">Log in met je e-mailadres om de generator te gebruiken.</p>
+  </div>
+  <div class="card">
+    <div class="card-shine"></div>
+
+    <!-- Stap A: e-mailadres invoeren -->
+    <div id="emailStep">
+      <span class="input-label">Jouw e-mailadres</span>
+      <input type="email" id="loginEmail" class="question-input" placeholder="jij@voorbeeld.nl" style="margin-bottom:16px;">
+      <button class="btn-primary" id="loginBtn" onclick="sendLoginCode()">
+        <div class="spinner" id="loginSpinner"></div>
+        <span id="loginBtnText">Stuur inlogcode →</span>
+      </button>
+    </div>
+
+    <!-- Stap B: de 6-cijferige code uit de mail zelf overtypen (in plaats van op een
+         link te klikken) — zo is er geen link die een mailprogramma alvast kan
+         scannen/"opgebruiken" voordat de gebruiker zelf iets doet -->
+    <div id="codeStep" style="display:none;">
+      <span class="input-label">Vul de code uit je mail in</span>
+      <input type="text" id="loginCode" class="question-input" placeholder="123456" inputmode="numeric" autocomplete="one-time-code" style="margin-bottom:16px; letter-spacing:4px; font-size:18px; text-align:center;">
+      <button class="btn-primary" id="codeBtn" onclick="confirmLoginCode()">
+        <div class="spinner" id="codeSpinner"></div>
+        <span id="codeBtnText">Inloggen →</span>
+      </button>
+      <button class="btn-restart" id="resendBtn" onclick="showEmailStep()" style="margin-top:10px;">↺ Ander e-mailadres / nieuwe code aanvragen</button>
+    </div>
+
+    <div class="login-msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<!-- DE ECHTE GENERATOR: verborgen totdat iemand is ingelogd -->
+<div class="container" id="appContainer" style="display:none;">
 
   <div class="header">
     <a class="back-link" href="https://chillionaires.club">Chillionaires Club</a>
@@ -434,6 +475,115 @@ let userWish = '';
 let generatedPrompt = '';
 let questionsData = [];
 
+// --- Supabase login ---
+const sb = supabase.createClient(
+  'https://dhxmibltjbaxebuqsweg.supabase.co',
+  'sb_publishable_q76v9zJm-SMTCWSpYz9wAQ_4WCkBl5m',
+  { auth: { flowType: 'pkce' } }
+);
+let currentSession = null;
+
+function updateGate() {
+  document.getElementById('loginGate').style.display = currentSession ? 'none' : '';
+  document.getElementById('appContainer').style.display = currentSession ? '' : 'none';
+}
+
+sb.auth.onAuthStateChange((_event, session) => {
+  currentSession = session;
+  updateGate();
+});
+
+// Werkt met een 6-cijferige inlogcode in plaats van een klikbare link.
+// Reden: een link kan door mailprogramma's (vooral zakelijke Outlook/Microsoft
+// 365-accounts) automatisch gescand/geopend worden vóórdat de ontvanger er zelf
+// op klikt. Omdat zo'n link maar één keer bruikbaar is, was die dan al "verbruikt"
+// tegen de tijd dat iemand er zelf op klikte — vandaar de melding "link verlopen
+// of gebruikt" en de loop terug naar het e-mailveld. Een code die iemand zelf
+// moet overtypen heeft dat probleem niet: er is niets voor een scanner om te
+// "gebruiken", alleen een mens kan de code overtypen.
+let pendingLoginEmail = null;
+
+function showCodeStep() {
+  document.getElementById('emailStep').style.display = 'none';
+  document.getElementById('codeStep').style.display = 'block';
+  document.getElementById('loginSubtitle').textContent = 'Check je mail voor de code en vul die hieronder in.';
+  document.getElementById('loginCode').value = '';
+  setTimeout(() => document.getElementById('loginCode').focus(), 50);
+}
+
+function showEmailStep() {
+  document.getElementById('emailStep').style.display = '';
+  document.getElementById('codeStep').style.display = 'none';
+  document.getElementById('loginSubtitle').textContent = 'Log in met je e-mailadres om de generator te gebruiken.';
+  document.getElementById('loginMsg').textContent = '';
+}
+
+async function sendLoginCode() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const msg = document.getElementById('loginMsg');
+  if (!email) {
+    msg.textContent = 'Vul eerst je e-mailadres in.';
+    return;
+  }
+  document.getElementById('loginSpinner').style.display = 'block';
+  document.getElementById('loginBtnText').textContent = 'Bezig...';
+  document.getElementById('loginBtn').disabled = true;
+
+  const { error } = await sb.auth.signInWithOtp({ email });
+
+  document.getElementById('loginSpinner').style.display = 'none';
+  document.getElementById('loginBtnText').textContent = 'Stuur inlogcode →';
+  document.getElementById('loginBtn').disabled = false;
+
+  if (error) {
+    msg.textContent = 'Er ging iets mis: ' + error.message;
+    return;
+  }
+
+  pendingLoginEmail = email;
+  msg.textContent = '';
+  showCodeStep();
+}
+
+async function confirmLoginCode() {
+  const code = document.getElementById('loginCode').value.trim();
+  const msg = document.getElementById('loginMsg');
+
+  if (!code) {
+    msg.textContent = 'Vul de code uit je mail in.';
+    return;
+  }
+  if (!pendingLoginEmail) {
+    msg.textContent = 'Er ging iets mis, vul opnieuw je e-mailadres in.';
+    showEmailStep();
+    return;
+  }
+
+  document.getElementById('codeSpinner').style.display = 'block';
+  document.getElementById('codeBtnText').textContent = 'Bezig...';
+  document.getElementById('codeBtn').disabled = true;
+
+  const { data, error } = await sb.auth.verifyOtp({ email: pendingLoginEmail, token: code, type: 'email' });
+
+  document.getElementById('codeSpinner').style.display = 'none';
+  document.getElementById('codeBtnText').textContent = 'Inloggen →';
+  document.getElementById('codeBtn').disabled = false;
+
+  if (error) {
+    msg.textContent = 'Deze code klopt niet (meer). Vraag eventueel een nieuwe aan.';
+    return;
+  }
+
+  currentSession = data.session;
+  updateGate();
+}
+
+sb.auth.getSession().then(({ data }) => {
+  currentSession = data.session;
+  updateGate();
+});
+// --- Einde Supabase login ---
+
 const examples = {
   nl: [
     'Weekje naar Lissabon plannen ✈️',
@@ -518,7 +668,10 @@ Rules:
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentSession.access_token}`
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1000,
@@ -528,7 +681,7 @@ Rules:
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || `API fout (${res.status})`);
+    if (!res.ok) throw new Error(data.error?.message || data.error || `API fout (${res.status})`);
 
     const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
     const clean = text.replace(/```json|```/g, '').trim();
@@ -609,7 +762,10 @@ Rules:
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentSession.access_token}`
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1200,
@@ -619,7 +775,7 @@ Rules:
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || `API fout (${res.status})`);
+    if (!res.ok) throw new Error(data.error?.message || data.error || `API fout (${res.status})`);
 
     const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
     if (!text) throw new Error('Geen resultaat ontvangen');
