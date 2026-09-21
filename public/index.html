@@ -351,16 +351,34 @@ textarea:focus {
 <div class="container" id="loginGate" style="display:none;">
   <div class="header">
     <h1>Prompt<br><span class="accent">Generator</span></h1>
-    <p class="subtitle">Log in met je e-mailadres om de generator te gebruiken.</p>
+    <p class="subtitle" id="loginSubtitle">Log in met je e-mailadres om de generator te gebruiken.</p>
   </div>
   <div class="card">
     <div class="card-shine"></div>
-    <span class="input-label">Jouw e-mailadres</span>
-    <input type="email" id="loginEmail" class="question-input" placeholder="jij@voorbeeld.nl" style="margin-bottom:16px;">
-    <button class="btn-primary" id="loginBtn" onclick="sendMagicLink()">
-      <div class="spinner" id="loginSpinner"></div>
-      <span id="loginBtnText">Stuur inloglink →</span>
-    </button>
+
+    <!-- Stap A: e-mailadres invoeren -->
+    <div id="emailStep">
+      <span class="input-label">Jouw e-mailadres</span>
+      <input type="email" id="loginEmail" class="question-input" placeholder="jij@voorbeeld.nl" style="margin-bottom:16px;">
+      <button class="btn-primary" id="loginBtn" onclick="sendLoginCode()">
+        <div class="spinner" id="loginSpinner"></div>
+        <span id="loginBtnText">Stuur inlogcode →</span>
+      </button>
+    </div>
+
+    <!-- Stap B: de 6-cijferige code uit de mail zelf overtypen (in plaats van op een
+         link te klikken) — zo is er geen link die een mailprogramma alvast kan
+         scannen/"opgebruiken" voordat de gebruiker zelf iets doet -->
+    <div id="codeStep" style="display:none;">
+      <span class="input-label">Vul de code uit je mail in</span>
+      <input type="text" id="loginCode" class="question-input" placeholder="123456" inputmode="numeric" autocomplete="one-time-code" style="margin-bottom:16px; letter-spacing:4px; font-size:18px; text-align:center;">
+      <button class="btn-primary" id="codeBtn" onclick="confirmLoginCode()">
+        <div class="spinner" id="codeSpinner"></div>
+        <span id="codeBtnText">Inloggen →</span>
+      </button>
+      <button class="btn-restart" id="resendBtn" onclick="showEmailStep()" style="margin-top:10px;">↺ Ander e-mailadres / nieuwe code aanvragen</button>
+    </div>
+
     <div class="login-msg" id="loginMsg"></div>
   </div>
 </div>
@@ -475,42 +493,32 @@ sb.auth.onAuthStateChange((_event, session) => {
   updateGate();
 });
 
-// Herkent een binnenkomende link (?token_hash=...&type=...) en rondt het
-// inloggen daarmee af — werkt ongeacht in welke browser de link geopend wordt.
-async function handleIncomingLink() {
-  const params = new URLSearchParams(window.location.search);
-  const tokenHash = params.get('token_hash');
-  const otpType = params.get('type');
+// Werkt met een 6-cijferige inlogcode in plaats van een klikbare link.
+// Reden: een link kan door mailprogramma's (vooral zakelijke Outlook/Microsoft
+// 365-accounts) automatisch gescand/geopend worden vóórdat de ontvanger er zelf
+// op klikt. Omdat zo'n link maar één keer bruikbaar is, was die dan al "verbruikt"
+// tegen de tijd dat iemand er zelf op klikte — vandaar de melding "link verlopen
+// of gebruikt" en de loop terug naar het e-mailveld. Een code die iemand zelf
+// moet overtypen heeft dat probleem niet: er is niets voor een scanner om te
+// "gebruiken", alleen een mens kan de code overtypen.
+let pendingLoginEmail = null;
 
-  if (!tokenHash || !otpType) return false;
-
-  const { data, error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type: otpType });
-
-  // Adresbalk opschonen, ongeacht het resultaat
-  window.history.replaceState({}, document.title, window.location.pathname);
-
-  if (error) {
-    document.getElementById('loginMsg').textContent =
-      'Deze link is verlopen of al gebruikt. Vraag hieronder een nieuwe aan.';
-    return false;
-  }
-
-  currentSession = data.session;
-  return true;
+function showCodeStep() {
+  document.getElementById('emailStep').style.display = 'none';
+  document.getElementById('codeStep').style.display = 'block';
+  document.getElementById('loginSubtitle').textContent = 'Check je mail voor de code en vul die hieronder in.';
+  document.getElementById('loginCode').value = '';
+  setTimeout(() => document.getElementById('loginCode').focus(), 50);
 }
 
-handleIncomingLink().then((loggedInViaLink) => {
-  if (!loggedInViaLink) {
-    sb.auth.getSession().then(({ data }) => {
-      currentSession = data.session;
-      updateGate();
-    });
-  } else {
-    updateGate();
-  }
-});
+function showEmailStep() {
+  document.getElementById('emailStep').style.display = '';
+  document.getElementById('codeStep').style.display = 'none';
+  document.getElementById('loginSubtitle').textContent = 'Log in met je e-mailadres om de generator te gebruiken.';
+  document.getElementById('loginMsg').textContent = '';
+}
 
-async function sendMagicLink() {
+async function sendLoginCode() {
   const email = document.getElementById('loginEmail').value.trim();
   const msg = document.getElementById('loginMsg');
   if (!email) {
@@ -521,19 +529,59 @@ async function sendMagicLink() {
   document.getElementById('loginBtnText').textContent = 'Bezig...';
   document.getElementById('loginBtn').disabled = true;
 
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.origin }
-  });
+  const { error } = await sb.auth.signInWithOtp({ email });
 
   document.getElementById('loginSpinner').style.display = 'none';
-  document.getElementById('loginBtnText').textContent = 'Stuur inloglink →';
+  document.getElementById('loginBtnText').textContent = 'Stuur inlogcode →';
   document.getElementById('loginBtn').disabled = false;
 
-  msg.textContent = error
-    ? ('Er ging iets mis: ' + error.message)
-    : 'Check je mail voor de inloglink! (kijk ook even bij spam)';
+  if (error) {
+    msg.textContent = 'Er ging iets mis: ' + error.message;
+    return;
+  }
+
+  pendingLoginEmail = email;
+  msg.textContent = '';
+  showCodeStep();
 }
+
+async function confirmLoginCode() {
+  const code = document.getElementById('loginCode').value.trim();
+  const msg = document.getElementById('loginMsg');
+
+  if (!code) {
+    msg.textContent = 'Vul de code uit je mail in.';
+    return;
+  }
+  if (!pendingLoginEmail) {
+    msg.textContent = 'Er ging iets mis, vul opnieuw je e-mailadres in.';
+    showEmailStep();
+    return;
+  }
+
+  document.getElementById('codeSpinner').style.display = 'block';
+  document.getElementById('codeBtnText').textContent = 'Bezig...';
+  document.getElementById('codeBtn').disabled = true;
+
+  const { data, error } = await sb.auth.verifyOtp({ email: pendingLoginEmail, token: code, type: 'email' });
+
+  document.getElementById('codeSpinner').style.display = 'none';
+  document.getElementById('codeBtnText').textContent = 'Inloggen →';
+  document.getElementById('codeBtn').disabled = false;
+
+  if (error) {
+    msg.textContent = 'Deze code klopt niet (meer). Vraag eventueel een nieuwe aan.';
+    return;
+  }
+
+  currentSession = data.session;
+  updateGate();
+}
+
+sb.auth.getSession().then(({ data }) => {
+  currentSession = data.session;
+  updateGate();
+});
 // --- Einde Supabase login ---
 
 const examples = {
