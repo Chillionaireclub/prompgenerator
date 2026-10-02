@@ -39,6 +39,29 @@ async function fetchWithRetry(url, options, retries = 3, delayMs = 800) {
 const TRIAL_LIMIET = 2;
 const CHECKOUT_URL = 'https://shop.chillionaires.club/checkout/promptgenerator';
 
+// Zet een e-mailadres om naar de vorm die we gebruiken om de gratis-proberen-
+// teller bij te houden, zodat de bekendste gratis trucjes om een "nieuw"
+// adres te krijgen niet werken:
+// - Alles na een "+" wordt genegeerd (naam+1@gmail.com → naam@gmail.com).
+//   Dit werkt bij vrijwel elke provider, niet alleen Gmail.
+// - Bij Gmail/Googlemail specifiek worden ook punten in het adres genegeerd
+//   (naam.achternaam@gmail.com → naamachternaam@gmail.com), want dat doet
+//   Gmail zelf ook — het is daar dezelfde inbox.
+// Let op: dit raakt alleen de trial-teller. De check of iemand al een betaald
+// account heeft blijft op het exacte, originele e-mailadres lopen.
+function normaliseerVoorTrial(email) {
+  const lower = email.trim().toLowerCase();
+  const atIndex = lower.lastIndexOf('@');
+  if (atIndex === -1) return lower;
+  let local = lower.slice(0, atIndex).split('+')[0];
+  const domain = lower.slice(atIndex + 1);
+  if (domain === 'gmail.com' || domain === 'googlemail.com') {
+    local = local.replace(/\./g, '');
+    return `${local}@gmail.com`;
+  }
+  return `${local}@${domain}`;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const authHeader = req.headers.authorization;
@@ -73,6 +96,7 @@ export default async function handler(req, res) {
       // "verbruikt" (zo kan dit nooit per ongeluk omzeild worden).
       const trialStap = req.headers['x-trial-step'] === 'check' ? 'check' : 'consume';
       const rpcNaam = trialStap === 'check' ? 'trial_status' : 'trial_poging_verbruiken';
+      const trialEmail = normaliseerVoorTrial(email);
 
       const trialResp = await fetchWithRetry(`${supabaseUrl}/rest/v1/rpc/${rpcNaam}`, {
         method: 'POST',
@@ -81,7 +105,7 @@ export default async function handler(req, res) {
           Authorization: `Bearer ${supabaseSecret}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ p_email: email, p_limiet: TRIAL_LIMIET }),
+        body: JSON.stringify({ p_email: trialEmail, p_limiet: TRIAL_LIMIET }),
       });
 
       if (!trialResp.ok) {
@@ -96,7 +120,7 @@ export default async function handler(req, res) {
       const aantalGebruikt = eersteRij ? eersteRij.aantal_gebruikt : TRIAL_LIMIET;
 
       if (!toegestaan) {
-        console.log('TRIAL OP:', JSON.stringify({ email, aantal: aantalGebruikt, stap: trialStap }));
+        console.log('TRIAL OP:', JSON.stringify({ email, trialEmail, aantal: aantalGebruikt, stap: trialStap }));
         return res.status(403).json({
           error: 'Je testpogingen zijn op.',
           trialOp: true,
@@ -104,7 +128,7 @@ export default async function handler(req, res) {
         });
       }
 
-      console.log('GRATIS TESTPOGING:', JSON.stringify({ email, aantal: aantalGebruikt, limiet: TRIAL_LIMIET, stap: trialStap }));
+      console.log('GRATIS TESTPOGING:', JSON.stringify({ email, trialEmail, aantal: aantalGebruikt, limiet: TRIAL_LIMIET, stap: trialStap }));
     }
   } catch (err) {
     console.log('TOEGANGSCHECK MISLUKT:', JSON.stringify({ email, fout: err.message }));
