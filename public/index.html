@@ -487,6 +487,10 @@ let lang = 'nl';
 let userWish = '';
 let generatedPrompt = '';
 let questionsData = [];
+// Of de zojuist gegenereerde prompt de laatste gratis poging was, en zo ja,
+// naar welke checkout-link iemand na het kopiëren doorgestuurd moet worden.
+let trialRanOutAfterCopy = false;
+let trialCheckoutUrlAfterCopy = null;
 
 // --- Supabase login ---
 const sb = supabase.createClient(
@@ -808,6 +812,17 @@ Rules:
     const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
     if (!text) throw new Error('Geen resultaat ontvangen');
 
+    // Was dit de laatste gratis poging? Dan sturen we iemand na het kopiëren
+    // direct door naar het betaalscherm, in plaats van te wachten tot ze
+    // zelf nog eens "opnieuw" proberen.
+    if (data._trial && data._trial.aantalGebruikt >= data._trial.limiet) {
+      trialRanOutAfterCopy = true;
+      trialCheckoutUrlAfterCopy = data._trial.checkoutUrl;
+    } else {
+      trialRanOutAfterCopy = false;
+      trialCheckoutUrlAfterCopy = null;
+    }
+
     generatedPrompt = text;
     showResult(text);
     setStep(3);
@@ -844,16 +859,26 @@ function copyPrompt() {
   if (!generatedPrompt) return;
   const btn = document.getElementById('copyBtn');
   if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(generatedPrompt).then(() => showCopied(btn));
+    navigator.clipboard.writeText(generatedPrompt).then(() => { showCopied(btn); maybeShowTrialBlockedAfterCopy(); });
   } else {
     const ta = document.createElement('textarea');
     ta.value = generatedPrompt;
     ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
     document.body.appendChild(ta);
     ta.focus(); ta.select();
-    try { document.execCommand('copy'); showCopied(btn); } catch(e) {}
+    try { document.execCommand('copy'); showCopied(btn); maybeShowTrialBlockedAfterCopy(); } catch(e) {}
     document.body.removeChild(ta);
   }
+}
+
+// Even de "Gekopieerd!"-feedback laten zien, en dan pas doorschakelen naar
+// het betaalscherm — zodat het niet overkomt alsof het kopiëren zelf mislukt.
+function maybeShowTrialBlockedAfterCopy() {
+  if (!trialRanOutAfterCopy) return;
+  const checkoutUrl = trialCheckoutUrlAfterCopy;
+  trialRanOutAfterCopy = false;
+  trialCheckoutUrlAfterCopy = null;
+  setTimeout(() => showTrialBlocked(checkoutUrl), 1200);
 }
 
 function showCopied(btn) {
