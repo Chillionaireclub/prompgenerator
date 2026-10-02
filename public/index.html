@@ -364,6 +364,7 @@ textarea:focus {
         <div class="spinner" id="loginSpinner"></div>
         <span id="loginBtnText">Stuur inlogcode →</span>
       </button>
+      <p style="font-size:12.5px; color:var(--muted2); margin-top:10px; line-height:1.5;">📬 Je ontvangt een mail met een code — <strong>check ook je spam-folder</strong> als je 'm niet meteen ziet.</p>
     </div>
 
     <!-- Stap B: de 6-cijferige code uit de mail zelf overtypen (in plaats van op een
@@ -465,12 +466,12 @@ textarea:focus {
   <!-- Blokkade: gratis testpogingen zijn op -->
   <div class="result-card" id="cardBlocked" style="display:none; text-align:center;">
     <div class="result-shine"></div>
-    <h2 style="font-size:22px; font-weight:700; margin-bottom:10px;">Je gratis testpogingen zijn op 🎉</h2>
+    <h2 style="font-size:22px; font-weight:700; margin-bottom:10px;">Dit beviel toch wel? 😍</h2>
     <p style="font-size:14px; color:var(--muted2); line-height:1.6; margin-bottom:22px;">
-      Leuk dat je de Prompt Generator hebt uitgeprobeerd! Wil je 'm blijven gebruiken?
+      Voor €34,99 heb je 6 maanden toegang — zo vaak gebruiken als je wilt, geen abonnement, gewoon één keer betalen.
     </p>
     <a class="btn-primary" id="checkoutBtn" href="https://shop.chillionaires.club/checkout/promptgenerator" target="_blank" rel="noopener" style="text-decoration:none;">
-      Klik hier om de Prompt Generator 6 maanden te gebruiken →
+      Amazing, ik wil dit! →
     </a>
   </div>
 
@@ -623,6 +624,13 @@ document.addEventListener('DOMContentLoaded', () => {
   renderExamples();
   document.getElementById('userInput').addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) getQuestions();
+  });
+  // Enter op het e-mailveld / codeveld stuurt meteen door, net als op de knop klikken.
+  document.getElementById('loginEmail').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); sendLoginCode(); }
+  });
+  document.getElementById('loginCode').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); confirmLoginCode(); }
   });
 });
 
