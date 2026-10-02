@@ -37,7 +37,7 @@ async function fetchWithRetry(url, options, retries = 3, delayMs = 800) {
 // Hoeveel gratis pogingen iemand zonder (actief) betaald account krijgt,
 // en waar ze naartoe gestuurd worden zodra die op zijn.
 const TRIAL_LIMIET = 2;
-const CHECKOUT_URL = 'https://shop.chillionaires.club/checkout/promptgenerator';
+const CHECKOUT_URL = 'https://shop.chillionaires.club/checkout/promptgenerator-trial';
 
 // Zet een e-mailadres om naar de vorm die we gebruiken om de gratis-proberen-
 // teller bij te houden, zodat de bekendste gratis trucjes om een "nieuw"
