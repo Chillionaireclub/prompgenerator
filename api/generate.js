@@ -73,6 +73,11 @@ export default async function handler(req, res) {
   const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY;
   const supabaseSecret = process.env.SUPABASE_SECRET_KEY;
 
+  // Wordt gevuld als dit een niet-betalende gebruiker is die deze poging mag
+  // doen — zo weet de frontend na een geslaagde generatie meteen of dit de
+  // laatste gratis poging was, zonder dat daar een 3e aanroep voor nodig is.
+  let trialInfoVoorResponse = null;
+
   try {
     // 1. Heeft deze persoon een actief betaald account? (ongewijzigd t.o.v. voorheen)
     const checkResponse = await fetch(`${supabaseUrl}/rest/v1/users?select=status,einddatum`, {
@@ -129,6 +134,8 @@ export default async function handler(req, res) {
       }
 
       console.log('GRATIS TESTPOGING:', JSON.stringify({ email, trialEmail, aantal: aantalGebruikt, limiet: TRIAL_LIMIET, stap: trialStap }));
+
+      trialInfoVoorResponse = { aantalGebruikt, limiet: TRIAL_LIMIET, checkoutUrl: CHECKOUT_URL };
     }
   } catch (err) {
     console.log('TOEGANGSCHECK MISLUKT:', JSON.stringify({ email, fout: err.message }));
@@ -144,6 +151,11 @@ export default async function handler(req, res) {
       body: JSON.stringify(req.body)
     });
     const data = await response.json();
+    // Alleen toevoegen bij een geslaagde aanroep — bij een foutmelding van
+    // Anthropic zelf blijft de response ongewijzigd.
+    if (trialInfoVoorResponse && response.ok) {
+      data._trial = trialInfoVoorResponse;
+    }
     return res.status(response.status).json(data);
   } catch (err) {
     return res.status(500).json({ error: 'Er ging iets mis: ' + err.message });
