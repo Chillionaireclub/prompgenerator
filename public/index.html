@@ -491,6 +491,9 @@ let questionsData = [];
 // naar welke checkout-link iemand na het kopiëren doorgestuurd moet worden.
 let trialRanOutAfterCopy = false;
 let trialCheckoutUrlAfterCopy = null;
+// Vangnet: als iemand niet zelf op kopieer klikt, schakelt de pagina na een
+// paar seconden ook automatisch door naar het betaalscherm.
+let trialAutoBlockTimer = null;
 
 // --- Supabase login ---
 const sb = supabase.createClient(
@@ -815,9 +818,21 @@ Rules:
     // Was dit de laatste gratis poging? Dan sturen we iemand na het kopiëren
     // direct door naar het betaalscherm, in plaats van te wachten tot ze
     // zelf nog eens "opnieuw" proberen.
+    if (trialAutoBlockTimer) { clearTimeout(trialAutoBlockTimer); trialAutoBlockTimer = null; }
+
     if (data._trial && data._trial.aantalGebruikt >= data._trial.limiet) {
       trialRanOutAfterCopy = true;
       trialCheckoutUrlAfterCopy = data._trial.checkoutUrl;
+      // Vangnet: ook als iemand niet zelf op kopieer klikt, zien ze het
+      // aanbod alsnog — na een paar seconden leestijd schakelen we vanzelf door.
+      trialAutoBlockTimer = setTimeout(() => {
+        if (trialRanOutAfterCopy) {
+          const checkoutUrl = trialCheckoutUrlAfterCopy;
+          trialRanOutAfterCopy = false;
+          trialCheckoutUrlAfterCopy = null;
+          showTrialBlocked(checkoutUrl);
+        }
+      }, 18000);
     } else {
       trialRanOutAfterCopy = false;
       trialCheckoutUrlAfterCopy = null;
@@ -875,6 +890,7 @@ function copyPrompt() {
 // het betaalscherm — zodat het niet overkomt alsof het kopiëren zelf mislukt.
 function maybeShowTrialBlockedAfterCopy() {
   if (!trialRanOutAfterCopy) return;
+  if (trialAutoBlockTimer) { clearTimeout(trialAutoBlockTimer); trialAutoBlockTimer = null; }
   const checkoutUrl = trialCheckoutUrlAfterCopy;
   trialRanOutAfterCopy = false;
   trialCheckoutUrlAfterCopy = null;
@@ -888,6 +904,9 @@ function showCopied(btn) {
 }
 
 function restart() {
+  if (trialAutoBlockTimer) { clearTimeout(trialAutoBlockTimer); trialAutoBlockTimer = null; }
+  trialRanOutAfterCopy = false;
+  trialCheckoutUrlAfterCopy = null;
   document.getElementById('userInput').value = '';
   document.getElementById('card2').style.display = 'none';
   document.getElementById('card3').style.display = 'none';
