@@ -351,7 +351,7 @@ textarea:focus {
 <div class="container" id="loginGate" style="display:none;">
   <div class="header">
     <h1>Prompt<br><span class="accent">Generator</span></h1>
-    <p class="subtitle" id="loginSubtitle">Probeer de Prompt Generator 2x helemaal gratis — vul je e-mailadres in en ik stuur je een inlogcode. Ik doe verder niets met je e-mailadres, beloofd 🤝</p>
+    <p class="subtitle" id="loginSubtitle">Probeer de Prompt Generator 2x helemaal gratis — vul je e-mailadres in en ik stuur je een inlogcode. <strong>Ik doe verder niets met je e-mailadres</strong>, beloofd 🤝</p>
   </div>
   <div class="card">
     <div class="card-shine"></div>
@@ -527,7 +527,7 @@ function showCodeStep() {
 function showEmailStep() {
   document.getElementById('emailStep').style.display = '';
   document.getElementById('codeStep').style.display = 'none';
-  document.getElementById('loginSubtitle').textContent = 'Probeer de Prompt Generator 2x helemaal gratis — vul je e-mailadres in en ik stuur je een inlogcode. Ik doe verder niets met je e-mailadres, beloofd 🤝';
+  document.getElementById('loginSubtitle').innerHTML = 'Probeer de Prompt Generator 2x helemaal gratis — vul je e-mailadres in en ik stuur je een inlogcode. <strong>Ik doe verder niets met je e-mailadres</strong>, beloofd 🤝';
   document.getElementById('loginMsg').textContent = '';
 }
 
