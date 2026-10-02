@@ -459,6 +459,7 @@ textarea:focus {
     <div class="platforms">
       <p class="platforms-label">Kopieer de prompt en plak hem in ChatGPT, Claude, Gemini of een ander AI-model naar keuze.</p>
     </div>
+    <p id="trialRemainingNotice" style="display:none; font-size:13.5px; color:var(--accent); font-weight:600; text-align:center; margin:14px 0 -4px;">⏳ Nog <span id="trialRemainingCount">1</span> gratis poging over</p>
     <button class="btn-copy-bottom" onclick="copyPrompt()">📋 Kopieer prompt</button>
     <button class="btn-restart" onclick="restart()">↺ Nieuwe prompt maken</button>
   </div>
@@ -833,9 +834,18 @@ Rules:
           showTrialBlocked(checkoutUrl);
         }
       }, 18000);
-    } else {
+      hideTrialRemainingNotice();
+    } else if (data._trial) {
+      // Nog niet de laatste gratis poging: laat zien hoeveel er nog over zijn,
+      // zodat mensen hun laatste kans straks bewust gebruiken.
       trialRanOutAfterCopy = false;
       trialCheckoutUrlAfterCopy = null;
+      showTrialRemainingNotice(data._trial.limiet - data._trial.aantalGebruikt);
+    } else {
+      // Betalende gebruiker: geen trial-info, dus ook geen melding.
+      trialRanOutAfterCopy = false;
+      trialCheckoutUrlAfterCopy = null;
+      hideTrialRemainingNotice();
     }
 
     generatedPrompt = text;
@@ -897,6 +907,17 @@ function maybeShowTrialBlockedAfterCopy() {
   setTimeout(() => showTrialBlocked(checkoutUrl), 1200);
 }
 
+function showTrialRemainingNotice(remaining) {
+  const el = document.getElementById('trialRemainingNotice');
+  if (remaining <= 0) { el.style.display = 'none'; return; }
+  document.getElementById('trialRemainingCount').textContent = remaining;
+  el.style.display = 'block';
+}
+
+function hideTrialRemainingNotice() {
+  document.getElementById('trialRemainingNotice').style.display = 'none';
+}
+
 function showCopied(btn) {
   btn.textContent = '✓ Gekopieerd!';
   btn.classList.add('copied');
@@ -907,6 +928,7 @@ function restart() {
   if (trialAutoBlockTimer) { clearTimeout(trialAutoBlockTimer); trialAutoBlockTimer = null; }
   trialRanOutAfterCopy = false;
   trialCheckoutUrlAfterCopy = null;
+  hideTrialRemainingNotice();
   document.getElementById('userInput').value = '';
   document.getElementById('card2').style.display = 'none';
   document.getElementById('card3').style.display = 'none';
