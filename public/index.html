@@ -477,6 +477,14 @@ textarea:focus {
     <a class="btn-primary" id="checkoutBtn" href="https://shop.chillionaires.club/checkout/promptgenerator-trial" target="_blank" rel="noopener" style="text-decoration:none;">
       Amazing, ik wil dit! →
     </a>
+
+    <!-- Laatste prompt nog eens terug kunnen lezen/kopiëren, ook als iemand
+         'm (nog) niet gekopieerd had voordat dit scherm verscheen. -->
+    <button type="button" id="lastPromptToggle" onclick="toggleLastPrompt()" style="display:none; background:none; border:none; color:var(--muted2); font-size:12.5px; text-decoration:underline; cursor:pointer; margin-top:18px; padding:4px;">
+      Nog eens je laatste prompt bekijken
+    </button>
+    <div id="lastPromptBox" style="display:none; text-align:left; margin-top:12px; background:var(--card-alt, rgba(0,0,0,0.03)); border-radius:10px; padding:14px; font-size:13px; line-height:1.6; white-space:pre-wrap;"></div>
+    <button type="button" class="btn-sm" id="lastPromptCopyBtn" onclick="copyLastPromptFromBlocked()" style="display:none; margin-top:10px;">📋 Kopieer</button>
   </div>
 
   <div class="footer">
@@ -845,6 +853,7 @@ Rules:
     }
 
     generatedPrompt = text;
+    try { localStorage.setItem('lastGeneratedPrompt', text); } catch (e) {}
     showResult(text, startTrialAutoBlockTimerIfNeeded);
     setStep(3);
 
@@ -987,6 +996,56 @@ function showTrialBlocked(checkoutUrl) {
   blocked.style.display = 'block';
   setTimeout(() => blocked.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
   startTrialCountdown();
+
+  // Laat het linkje om de laatste prompt terug te lezen alleen zien als
+  // die er ook echt nog is (ook na een refresh, via localStorage).
+  const toggle = document.getElementById('lastPromptToggle');
+  document.getElementById('lastPromptBox').style.display = 'none';
+  document.getElementById('lastPromptCopyBtn').style.display = 'none';
+  toggle.textContent = 'Nog eens je laatste prompt bekijken';
+  toggle.style.display = getLastPromptText() ? 'inline-block' : 'none';
+}
+
+// De laatste gegenereerde prompt bewaren we ook los in localStorage, zodat
+// iemand die ververst of later terugkomt op het betaalscherm 'm nog kan
+// terugvinden, ook al is het geheugen van de pagina dan leeg.
+function getLastPromptText() {
+  if (generatedPrompt) return generatedPrompt;
+  try { return localStorage.getItem('lastGeneratedPrompt') || ''; } catch (e) { return ''; }
+}
+
+function toggleLastPrompt() {
+  const box = document.getElementById('lastPromptBox');
+  const toggle = document.getElementById('lastPromptToggle');
+  const copyBtn = document.getElementById('lastPromptCopyBtn');
+  const isOpen = box.style.display === 'block';
+  if (isOpen) {
+    box.style.display = 'none';
+    copyBtn.style.display = 'none';
+    toggle.textContent = 'Nog eens je laatste prompt bekijken';
+  } else {
+    box.textContent = getLastPromptText();
+    box.style.display = 'block';
+    copyBtn.style.display = 'inline-flex';
+    toggle.textContent = 'Verbergen';
+  }
+}
+
+function copyLastPromptFromBlocked() {
+  const text = getLastPromptText();
+  if (!text) return;
+  const btn = document.getElementById('lastPromptCopyBtn');
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => showCopied(btn));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); showCopied(btn); } catch (e) {}
+    document.body.removeChild(ta);
+  }
 }
 
 // De actieprijs toont een aftelklok van 24 uur. Dat tijdstip wordt lokaal
