@@ -468,8 +468,11 @@ textarea:focus {
   <div class="result-card" id="cardBlocked" style="display:none; text-align:center;">
     <div class="result-shine"></div>
     <h2 style="font-size:22px; font-weight:700; margin-bottom:10px;">Dit beviel toch wel? 😍</h2>
-    <p style="font-size:14px; color:var(--muted2); line-height:1.6; margin-bottom:22px;">
+    <p style="font-size:14px; color:var(--muted2); line-height:1.6; margin-bottom:14px;">
       Voor <s style="color:var(--muted);">€39,99</s> <strong style="color:var(--accent);">€29,99</strong> heb je 6 maanden toegang — zo vaak gebruiken als je wilt, geen abonnement, gewoon één keer betalen.
+    </p>
+    <p style="font-size:13px; color:var(--accent); font-weight:700; margin-bottom:22px;">
+      ⏰ Deze prijs is nog <span id="trialCountdown">24:00:00</span> geldig
     </p>
     <a class="btn-primary" id="checkoutBtn" href="https://shop.chillionaires.club/checkout/promptgenerator-trial" target="_blank" rel="noopener" style="text-decoration:none;">
       Amazing, ik wil dit! →
@@ -983,6 +986,48 @@ function showTrialBlocked(checkoutUrl) {
   if (checkoutUrl) link.href = checkoutUrl;
   blocked.style.display = 'block';
   setTimeout(() => blocked.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+  startTrialCountdown();
+}
+
+// De actieprijs toont een aftelklok van 24 uur. Dat tijdstip wordt lokaal
+// opgeslagen (per browser), zodat iemand die later terugkomt gewoon verder
+// ziet aftellen vanaf hun eigen eerste bezoek aan dit scherm, in plaats van
+// dat de klok steeds weer bij 24:00:00 begint.
+function getTrialOfferDeadline() {
+  const DUUR_MS = 24 * 60 * 60 * 1000;
+  try {
+    const opgeslagen = localStorage.getItem('trialOfferDeadline');
+    if (opgeslagen) return parseInt(opgeslagen, 10);
+    const deadline = Date.now() + DUUR_MS;
+    localStorage.setItem('trialOfferDeadline', String(deadline));
+    return deadline;
+  } catch (e) {
+    // Geen localStorage beschikbaar: gewoon 24 uur vanaf nu, niet bewaard.
+    return Date.now() + DUUR_MS;
+  }
+}
+
+let trialCountdownInterval = null;
+function startTrialCountdown() {
+  const el = document.getElementById('trialCountdown');
+  if (!el) return;
+  const deadline = getTrialOfferDeadline();
+
+  function update() {
+    const resterend = Math.max(0, deadline - Date.now());
+    const uren = Math.floor(resterend / 3600000);
+    const minuten = Math.floor((resterend % 3600000) / 60000);
+    const seconden = Math.floor((resterend % 60000) / 1000);
+    el.textContent = `${String(uren).padStart(2, '0')}:${String(minuten).padStart(2, '0')}:${String(seconden).padStart(2, '0')}`;
+    if (resterend <= 0 && trialCountdownInterval) {
+      clearInterval(trialCountdownInterval);
+      trialCountdownInterval = null;
+    }
+  }
+
+  update();
+  if (trialCountdownInterval) clearInterval(trialCountdownInterval);
+  trialCountdownInterval = setInterval(update, 1000);
 }
 </script>
 </body>
