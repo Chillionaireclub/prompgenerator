@@ -822,18 +822,11 @@ Rules:
     if (trialAutoBlockTimer) { clearTimeout(trialAutoBlockTimer); trialAutoBlockTimer = null; }
 
     if (data._trial && data._trial.aantalGebruikt >= data._trial.limiet) {
+      // Het vangnet-klokje start pas zodra de tekst volledig is uitgetypt
+      // (zie showResult hieronder), niet al vanaf dit moment — anders gaat
+      // de typewriter-animatie ten koste van de echte leestijd.
       trialRanOutAfterCopy = true;
       trialCheckoutUrlAfterCopy = data._trial.checkoutUrl;
-      // Vangnet: ook als iemand niet zelf op kopieer klikt, zien ze het
-      // aanbod alsnog — na een paar seconden leestijd schakelen we vanzelf door.
-      trialAutoBlockTimer = setTimeout(() => {
-        if (trialRanOutAfterCopy) {
-          const checkoutUrl = trialCheckoutUrlAfterCopy;
-          trialRanOutAfterCopy = false;
-          trialCheckoutUrlAfterCopy = null;
-          showTrialBlocked(checkoutUrl);
-        }
-      }, 18000);
       hideTrialRemainingNotice();
     } else if (data._trial) {
       // Nog niet de laatste gratis poging: laat zien hoeveel er nog over zijn,
@@ -849,7 +842,7 @@ Rules:
     }
 
     generatedPrompt = text;
-    showResult(text);
+    showResult(text, startTrialAutoBlockTimerIfNeeded);
     setStep(3);
 
   } catch (err) {
@@ -860,7 +853,7 @@ Rules:
   }
 }
 
-function showResult(text) {
+function showResult(text, onDone) {
   const card = document.getElementById('card3');
   const el = document.getElementById('resultText');
   card.style.display = 'block';
@@ -874,10 +867,30 @@ function showResult(text) {
   const speed = text.length > 500 ? 5 : 10;
   const timer = setInterval(() => {
     if (i < text.length) { el.insertBefore(document.createTextNode(text[i++]), cursor); }
-    else { clearInterval(timer); cursor.remove(); }
+    else {
+      clearInterval(timer);
+      cursor.remove();
+      if (onDone) onDone();
+    }
   }, speed);
 
   setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+}
+
+// Start pas het vangnet-klokje zodra de prompt volledig zichtbaar is (dus
+// ná de typewriter-animatie) — zo is 18 seconden ook echt 18 seconden
+// leestijd, ongeacht hoe lang de prompt is.
+function startTrialAutoBlockTimerIfNeeded() {
+  if (!trialRanOutAfterCopy) return;
+  if (trialAutoBlockTimer) { clearTimeout(trialAutoBlockTimer); }
+  trialAutoBlockTimer = setTimeout(() => {
+    if (trialRanOutAfterCopy) {
+      const checkoutUrl = trialCheckoutUrlAfterCopy;
+      trialRanOutAfterCopy = false;
+      trialCheckoutUrlAfterCopy = null;
+      showTrialBlocked(checkoutUrl);
+    }
+  }, 18000);
 }
 
 function copyPrompt() {
