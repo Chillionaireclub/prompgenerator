@@ -73,6 +73,13 @@ export default async function handler(req, res) {
   const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY;
   const supabaseSecret = process.env.SUPABASE_SECRET_KEY;
 
+  // 'status' = alleen checken of iemand al tegen de limiet is aangelopen,
+  // zonder een prompt te maken (en dus zonder Anthropic aan te roepen). Wordt
+  // gebruikt vlak na het inloggen, zodat iemand die zijn gratis pogingen al
+  // had opgebruikt meteen het betaalscherm ziet in plaats van eerst weer het
+  // "wat wil je bereiken"-scherm.
+  const isStatusCheck = req.headers['x-trial-step'] === 'status';
+
   // Wordt gevuld als dit een niet-betalende gebruiker is die deze poging mag
   // doen — zo weet de frontend na een geslaagde generatie meteen of dit de
   // laatste gratis poging was, zonder dat daar een 3e aanroep voor nodig is.
@@ -88,6 +95,12 @@ export default async function handler(req, res) {
     const vandaag = new Date().toISOString().slice(0, 10);
     const heeftBetaaldeToegang = user && user.status === 'actief' && (!user.einddatum || user.einddatum >= vandaag);
 
+    if (heeftBetaaldeToegang && isStatusCheck) {
+      // Betalende klant die alleen even status checkt: altijd toegestaan,
+      // geen Anthropic-aanroep nodig.
+      return res.status(200).json({ ok: true });
+    }
+
     if (!heeftBetaaldeToegang) {
       // 2. Geen (actief) betaald account: val terug op de gratis testpogingen.
       if (!email) {
@@ -95,11 +108,12 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Je hebt geen actieve toegang. Neem contact op als je denkt dat dit niet klopt.' });
       }
 
-      // De eerste stap (vragen ophalen) telt NIET als gebruikte poging, alleen
-      // de laatste stap (de prompt zelf maken) wel — vandaar de header die de
-      // frontend meestuurt. Onbekend/ontbrekend = veilig aan de kant van
-      // "verbruikt" (zo kan dit nooit per ongeluk omzeild worden).
-      const trialStap = req.headers['x-trial-step'] === 'check' ? 'check' : 'consume';
+      // De eerste stap (vragen ophalen) en de losse status-check tellen NIET
+      // als gebruikte poging, alleen de laatste stap (de prompt zelf maken)
+      // wel — vandaar de header die de frontend meestuurt. Onbekend/ontbrekend
+      // = veilig aan de kant van "verbruikt" (zo kan dit nooit per ongeluk
+      // omzeild worden).
+      const trialStap = (req.headers['x-trial-step'] === 'check' || isStatusCheck) ? 'check' : 'consume';
       const rpcNaam = trialStap === 'check' ? 'trial_status' : 'trial_poging_verbruiken';
       const trialEmail = normaliseerVoorTrial(email);
 
@@ -134,6 +148,11 @@ export default async function handler(req, res) {
       }
 
       console.log('GRATIS TESTPOGING:', JSON.stringify({ email, trialEmail, aantal: aantalGebruikt, limiet: TRIAL_LIMIET, stap: trialStap }));
+
+      if (isStatusCheck) {
+        // Nog niet geblokkeerd: niets te melden, gewoon het normale scherm tonen.
+        return res.status(200).json({ ok: true, aantalGebruikt, limiet: TRIAL_LIMIET });
+      }
 
       trialInfoVoorResponse = { aantalGebruikt, limiet: TRIAL_LIMIET, checkoutUrl: CHECKOUT_URL };
     }
